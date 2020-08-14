@@ -1,0 +1,31 @@
+name: demographic-modeling
+
+channels:
+  - esri
+  - conda-forge
+  - knu2xs
+
+dependencies:
+  - arcgis==1.8.2
+  - cookiecutter
+  - ba-tools
+  - dask
+  - h3-py
+  - jupyterlab
+  - mkdocs
+  - pip
+  - pylint
+  - pytest
+  - python-dotenv
+  - pyyaml
+  - scipy
+  - scikit-learn
+  - shapely
+  - swifter
+  - tqdm
+  - pip:
+    - ipykernel
+    - pyarrow
+    - sphinx
+    - sphinx-autodoc-typehints
+    - sphinx_rtd_theme
