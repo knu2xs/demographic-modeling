@@ -67,10 +67,10 @@ def setup(app):
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
-# The suffix of source filenames.
+# The suffix of in_source filenames.
 source_suffix = '.rst'
 
-# The encoding of source files.
+# The encoding of in_source files.
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
@@ -86,8 +86,8 @@ master_doc = 'index'
 # Else, today_fmt is used as the format for a strftime call.
 # today_fmt = '%B %d, %Y'
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
+# List of patterns, relative to in_source directory, that match files and
+# directories to ignore when looking for in_source files.
 exclude_patterns = ['build']
 
 # The reST default role (used for this markup: `text`) to use for all documents.

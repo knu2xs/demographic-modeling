@@ -6,9 +6,11 @@ channels:
   - knu2xs
 
 dependencies:
+  - anaconda
   - arcgis==1.8.2
   - cookiecutter
   - ba-tools
+  - bump2version
   - dask
   - h3-py
   - jupyterlab
@@ -29,3 +31,4 @@ dependencies:
     - sphinx
     - sphinx-autodoc-typehints
     - sphinx_rtd_theme
+    - twine

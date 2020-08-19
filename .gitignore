@@ -76,7 +76,7 @@ target/
 # Jupyter NB Checkpoints
 .ipynb_checkpoints/
 
-# exclude data from source control by default
+# exclude data from in_source control by default
 data/
 models/
 
