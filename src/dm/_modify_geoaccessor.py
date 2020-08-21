@@ -8,25 +8,25 @@ from arcgis.features.geo._internals import register_dataframe_accessor
 import pandas as pd
 import swifter
 
+
+# https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
+def add_method(cls):
+    """Helper decorator method for adding methods onto an existing object."""
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        # Note we are not binding func, but wrapper which accepts self but does exactly the same as func
+        setattr(cls, func.__name__, wrapper)
+
+        return func  # returning func means func can still be used normally
+
+    return decorator
+
 @register_dataframe_accessor("spatial")
 class GeoAccessorIO(GeoAccessor):
-
-    # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
-    def add_method(cls):
-        """Helper decorator method for adding methods onto an existing object."""
-        def decorator(func):
-
-            @wraps(func)
-            def wrapper(self, *args, **kwargs):
-                return func(*args, **kwargs)
-
-            # Note we are not binding func, but wrapper which accepts self but does exactly the same as func
-            setattr(cls, func.__name__, wrapper)
-
-            return func  # returning func means func can still be used normally
-
-        return decorator
-
 
     @staticmethod
     def _geometry_column_to_str(df: pd.DataFrame, geometry_column: str = 'SHAPE'):
