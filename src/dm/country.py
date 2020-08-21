@@ -27,18 +27,18 @@ def use_local_vs_gis(fn):
         # if performing analysis locally, try to access the function locally, but if not implemented, catch the error
         if self.source == 'local':
             try:
-                f_to_call = getattr(self, method_name + "_local")
+                f_to_call = getattr(self, f'{method_name}_local')
             except AttributeError:
                 raise AttributeError(f"'{method_name}' not available using 'local' as the source.")
 
         elif isinstance(self.source, arcgis.gis.GIS):
 
             try:
-                f_to_call = getattr(self, method_name + "_gis")
+                f_to_call = getattr(self, f'{method_name}_gis')
             except AttributeError:
                 raise AttributeError(f"'{method_name}' not available using a Web GIS as the source.")
         else:
-            raise AttributeError(f"Source '{self.source}' does not implement ")
+            raise AttributeError(f"Source '{self.source}' has not yet implemented {method_name}.")
 
         return f_to_call(*args, **kwargs)
 
