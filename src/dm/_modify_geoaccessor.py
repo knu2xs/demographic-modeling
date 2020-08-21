@@ -141,8 +141,7 @@ class GeoAccessorIO(GeoAccessor):
         Returns: String, path or IO object referencing the output.
         """
         # convert the geometry column to object(str) in the self._data property, which is the instance of the df
-        self._data[geometry_column] = self._data[geometry_column].swifter.allow_dask_on_strings(True).apply(
-            lambda val: val.JSON)
+        self._data[geometry_column] = self._data[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
         return self._data.to_csv(path_or_buf, **kwargs)
@@ -164,8 +163,7 @@ class GeoAccessorIO(GeoAccessor):
         Returns: String, path or IO object referencing the output.
         """
         # convert the geometry column to object(str) in the self._data property, which is the instance of the df
-        self._data[geometry_column] = self._data[geometry_column].swifter.allow_dask_on_strings(True).apply(
-            lambda val: val.JSON)
+        self._data[geometry_column] = self._data[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
         return self._data.to_parquet(path, **kwargs)
