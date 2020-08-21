@@ -21,7 +21,7 @@ def use_local_vs_gis(fn):
 
     @wraps(fn)
     def wrapped(*args, **kwargs):
-        # This is a class method decorator, first arg is self
+        # This is a class method decorator, first arg is cls
         self = args[0]
 
         # if performing analysis locally, try to access the function locally, but if not implemented, catch the error

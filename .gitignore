@@ -77,7 +77,10 @@ target/
 .ipynb_checkpoints/
 
 # exclude data from in_source control by default
-data/
+data/external
+data/interim
+data/processed
+data/raw
 models/
 
 # Mac OS-specific storage files

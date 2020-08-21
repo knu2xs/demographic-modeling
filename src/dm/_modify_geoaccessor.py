@@ -1,4 +1,5 @@
 from functools import wraps # This convenience func preserves name and docstring
+import json
 import pathlib
 from typing import IO, AnyStr
 
@@ -6,8 +7,6 @@ from arcgis.features import GeoAccessor
 from arcgis.geometry import Geometry
 from arcgis.features.geo._internals import register_dataframe_accessor
 import pandas as pd
-import swifter
-
 
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
 def add_method(cls):
@@ -18,7 +17,7 @@ def add_method(cls):
         def wrapper(self, *args, **kwargs):
             return func(*args, **kwargs)
 
-        # Note we are not binding func, but wrapper which accepts self but does exactly the same as func
+        # Note we are not binding func, but wrapper which accepts cls but does exactly the same as func
         setattr(cls, func.__name__, wrapper)
 
         return func  # returning func means func can still be used normally
@@ -70,15 +69,15 @@ class GeoAccessorIO(GeoAccessor):
         Returns: Spatially Enabled Pandas DataFrame
         """
         # convert the values in the geometry column to geometry objects
-        df[geometry_column] = df[geometry_column].swifter.allow_dask_on_strings(True).apply(
-            lambda val: Geometry(eval(val)))
+        df[geometry_column] = df[geometry_column].apply(lambda val: Geometry(json.loads(val)))
 
         # tell the GeoAccessor to recognize the column
         df.spatial.set_geometry(geometry_column)
 
         return df
 
-    def read_csv(self, filepath_or_buffer: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE',
+    @classmethod
+    def read_csv(cls, filepath_or_buffer: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE',
                  **kwargs) -> pd.DataFrame:
         """
         Read a CSV file and convert the geometry column to geometry objects for a fully
@@ -95,12 +94,13 @@ class GeoAccessorIO(GeoAccessor):
         Returns: Spatially Enabled Pandas DataFrame
         """
         # read in the pandas df just like normal
-        self._data = pd.read_csv(filepath_or_buffer, **kwargs)
+        cls._data = pd.read_csv(filepath_or_buffer, **kwargs)
 
         # set the geometry column
-        return self._convert_geometry_column_to_geometry(self._data, geometry_column)
+        return cls._convert_geometry_column_to_geometry(cls._data, geometry_column)
 
-    def read_parquet(self, path: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE', **kwargs) -> pd.DataFrame:
+    @classmethod
+    def read_parquet(cls, path: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE', **kwargs) -> pd.DataFrame:
         """
         Read a parquet file and convert the geometry column to a geometry objects for a
             fully functioning Spatially Enabled DataFrame. This function also accepts all
@@ -119,10 +119,10 @@ class GeoAccessorIO(GeoAccessor):
         Returns: Spatially Enabled Pandas DataFrame
         """
         # read in the pandas df just like normal
-        self._data = self._data.read_csv(path, **kwargs)
+        cls._data = cls._data.read_csv(path, **kwargs)
 
         # set the geometry column
-        return self._convert_geometry_column_to_geometry(self._data, geometry_column)
+        return cls._convert_geometry_column_to_geometry(cls._data, geometry_column)
 
     def to_csv(self, path_or_buf:[str, pathlib.Path, IO[AnyStr]], geometry_column:str='SHAPE', **kwargs):
         """
@@ -140,7 +140,7 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: String, path or IO object referencing the output.
         """
-        # convert the geometry column to object(str) in the self._data property, which is the instance of the df
+        # convert the geometry column to object(str) in the cls._data property, which is the instance of the df
         self._data[geometry_column] = self._data[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
@@ -162,7 +162,7 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: String, path or IO object referencing the output.
         """
-        # convert the geometry column to object(str) in the self._data property, which is the instance of the df
+        # convert the geometry column to object(str) in the cls._data property, which is the instance of the df
         self._data[geometry_column] = self._data[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
