@@ -50,9 +50,9 @@ def _set_source(self, in_source:[str, arcgis.gis.GIS]=None) -> [str, arcgis.gis.
 
 
 def get_countries(source=None) -> pd.DataFrame:
-    """Get dataframe of countries available."""
+    """Get df of countries available."""
     # TODO: Handle contingency of BA being available, but data not locally installed.
-    # TODO: match dataframe schema between local and remote GIS instance
+    # TODO: match df schema between local and remote GIS instance
 
     src = _set_source(source)
 

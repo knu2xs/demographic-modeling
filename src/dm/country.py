@@ -119,7 +119,7 @@ class Country(pd.DataFrame):
                       aoi_selector: str = None, aoi_selection_field: str = 'NAME',
                       aoi_query_string: str = None) -> pd.DataFrame:
         """
-        Get a dataframe at an available geography level. Since frequently working within an area of interest defined
+        Get a df at an available geography level. Since frequently working within an area of interest defined
         by a higher level of geography, typically a CBSA or DMA, the ability to specify this area using input
         parameters is also included. This dramatically speeds up the process of creating the output.
 
@@ -176,15 +176,18 @@ class Country(pd.DataFrame):
         # if using a filter
         else:
 
+            lyr, fld_lst = _fc_to_lyr(geo, where_clause)
+            aoi_lyr = _fc_to_lyr(aoi_geo)[0]
+
             # select by location to reduce output overhead
             sel_lyr = arcpy.management.SelectLayerByLocation(
-                in_layer=_fc_to_lyr(geo, where_clause),
+                in_layer=lyr,
                 overlap_type='HAVE_THEIR_CENTER_IN',
-                select_features=_fc_to_lyr(aoi_geo, aoi_where_clause)
+                select_features=aoi_lyr
             )[0]
 
-            # convert to spatially enabled dataframe and return results
-            return self.spatial.from_featureclass(sel_lyr, fields=out_fld_lst)
+            # convert to spatially enabled df and return results
+            return self.spatial.from_featureclass(sel_lyr, fields=fld_lst)
 
     def within(self, selecting_area: [pd.DataFrame, arcgis.geometry.Geometry],
                index_features: bool = False) -> pd.DataFrame:
@@ -194,10 +197,10 @@ class Country(pd.DataFrame):
         if isinstance(selecting_area, pd.DataFrame):
 
             if selecting_area.spatial.validate() is False:
-                raise Exception('The selecting areas dataframe provided does not appear to be a valid spatially'
-                                ' enabled dataframe.')
+                raise Exception('The selecting areas df provided does not appear to be a valid spatially'
+                                ' enabled df.')
 
-            # copy the dataframe with everything except the geometry
+            # copy the df with everything except the geometry
             tmp_df = self[[col for col in self.columns if col != 'SHAPE']].copy()
 
             # convert the geometries to points

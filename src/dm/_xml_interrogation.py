@@ -8,7 +8,7 @@ from ._registry import get_ba_key_value
 
 def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = 'USA')->pd.DataFrame:
     """
-    Get a dataframe of available demographic geography area resolutions.
+    Get a df of available demographic geography area resolutions.
     Args:
         three_letter_country_identifier: Just like it sounds, the three letter country identifier. Defaults to 'USA'.
 
