@@ -5,7 +5,7 @@ import arcgis
 from ba_tools import data as ba_data
 import pandas as pd
 
-from ._registry_nav import get_ba_usa_key_str
+from ._registry import get_ba_usa_key_str
 
 # run some checks to see what is available
 arcpy_avail = True if importlib.util.find_spec("arcpy") else False

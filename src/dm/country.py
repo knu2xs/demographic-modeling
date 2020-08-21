@@ -5,36 +5,51 @@ import arcgis.gis
 import arcgis.features
 from arcgis.features import GeoAccessor
 from arcgis.geometry import Geometry
-from ba_tools import data
 import pandas as pd
 
 from . import util
-from ._registry_nav import get_ba_demographic_gdb_path
+from ._xml_interrogation import get_heirarchial_geography_dataframe
+from ._registry import get_ba_demographic_gdb_path
 
 if util.arcpy_avail:
     import arcpy
 
 
-class GeographyDataFrame(pd.DataFrame):
-    """Class to enable function chaining from the get_geography method below."""
+def use_local_vs_gis(fn):
+    # get the method name, used to redirect call
+    method_name = fn.__name__
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        # This is a class method decorator, first arg is self
+        self = args[0]
+
+        # if performing analysis locally, try to access the function locally, but if not implemented, catch the error
+        if self.source == 'local':
+            try:
+                f_to_call = getattr(self, method_name + "_local")
+            except AttributeError:
+                raise AttributeError(f"'{method_name}' not available using 'local' as the source.")
+
+        elif isinstance(self.source, arcgis.gis.GIS):
+
+            try:
+                f_to_call = getattr(self, method_name + "_gis")
+            except AttributeError:
+                raise AttributeError(f"'{method_name}' not available using a Web GIS as the source.")
+        else:
+            raise AttributeError(f"Source '{self.source}' does not implement ")
+
+        return f_to_call(*args, **kwargs)
+
+    return wrapped
 
 
-def dataframe_wrapper(fn):
-    @wraps
-    def wrapper(*args, **kwds):
-        return fn(*args, **kwds)
+class Country(pd.DataFrame):
 
-    return wrapper
+    def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None, *args, **kwargs):
 
-
-class Country(GeographyDataFrame):
-
-    def __init__(self, name: str, source: [str, arcgis.gis.GIS], **kwargs):
-
-        super().__init__(**kwargs)
+        super().__init__(*args, **kwargs)
 
         self.name = name
         self.source = util._set_source(source)
@@ -42,93 +57,137 @@ class Country(GeographyDataFrame):
     @property
     def geographies(self) -> pd.DataFrame:
         """DataFrame of available geographies."""
-        # TODO: How to populate by reading local resources?
-        geo_lst = [
-            ('block_group', 'Block Group', 'US Census designated block groups', None),
-            ('tract', 'Tract', 'US Census designated tracts', None),
-            ('place', 'Place', 'US Census designated places, typically municipal boundaries', 3),
-            ('csd', 'County Sub-Divisions', 'Sub divisions within counties.', None),
-            ('county', 'County', 'County boundaries', int(2)),
-            ('cbsa', 'Core-Based Statistical Area', 'Metro and mircopolitan areas.', None),
-            ('dma', 'Designated Market Area', 'Market areas defined by media reach comprised of counties.', None),
-            ('state', 'State', 'US states', int(1)),
-            ('country', 'Entire Country', 'The United States', int(0))
-        ]
-        df = pd.DataFrame(geo_lst, columns=['name', 'alias', 'description', 'admin_level'], )
-        return df
+        return get_heirarchial_geography_dataframe(self.name)
 
-    def get_geography(self, geography: [str, int], selector: str = None, selection_field: str = 'NAME',
-                      query_string=None) -> GeographyDataFrame:
-        """
-        Get a dataframe at an available geography level.
-        :param geography: Either the name or the index of the geography level. This can be discovered using the
-            Country.geographies method.
-        :param selector: If a specific value can be identified using a string, even if just part of the field value,
-            you can insert it here.
-        :param selection_field: This is the field to be searched for the string values input into selector.
-        :param query_string: If a more custom query is desired to filter the output, please use SQL here to specify the
-            query.
-        :return: GeographyDataFrame with the requested geographies.
-        """
+    def _get_geography_preprocessing(self, geography: [str, int], selector: str = None,
+                                     selection_field: str = 'NAME', query_string: str = None,
+                                     aoi_geography: [str, int] = None,
+                                     aoi_selector: str = None, aoi_selection_field: str = 'NAME',
+                                     aoi_query_string: str = None) -> tuple:
+        """Helper function consolidating input parameters for later steps."""
 
-        if self.source is 'local':
-            gdb = get_ba_demographic_gdb_path()
-
-        # set up the where clause based on input
-        if query_string:
-            where_clause = query_string
-
-        elif selection_field and selector:
-            where_clause = f"{selection_field} LIKE '%{selector}%'"
-
-        else:
-            where_clause = None
-
-        def _read_geo(feature_class_name, fld_lst=['ID', 'NAME']):
-            """Helper function to speed things up."""
-            if 'SHAPE' in fld_lst:
-                fld_lst.remove('SHAPE')
-
-            fc_pth = os.path.join(gdb, feature_class_name)
-
-            # df = pd.DataFrame(
-            #     data=[list(r[:-1]) + [Geometry(r[-1].JSON)] for r in
-            #           arcpy.da.SearchCursor(fc_pth, fld_lst + ['SHAPE@'])],
-            #     columns=fld_lst + ['SHAPE']
-            # )
-            # df.spatial.set_geometry = 'SHAPE'
-            df = GeoAccessor.from_featureclass(fc_pth, fields=fld_lst, where_clause=where_clause)
-
-            return self.spatial.from_df(df, geometry_column='SHAPE')
-
-        # if string, ensure is one of the geographc areas
-        if isinstance(geography, str):
-
+        def _check_geo_name(nm):
+            """Helper function to check if the geography name is valid."""
             if geography not in self.geographies.name.values:
                 raise Exception(
-                    f'Your selector, "{geography}," is not an available selector. To view a list of available'
+                    f'Your selector, "{nm}," is not an available selector. To view a list of available'
                     f' selectors, please view the {self.name}.geographies property.')
+            else:
+                return True
 
-            if geography == 'block_group':
-                return _read_geo('BlockGroups_bg')
-
-            elif geography == 'cbsa':
-                return _read_geo('CBSAs_cb')
-
-        # if integer, ensure in not beyond the range
-        if isinstance(geography, (int, float)):
-
-            if geography > len(self.geographies.index):
+        def _check_geo_index(idx):
+            """Helper function to check if the index is in range."""
+            if idx > len(self.geographies.index):
                 raise Exception(f'Your selector, "{geography}", is beyond the maximum range of available geographies.')
+            else:
+                return True
 
-            if geography == 0:
-                return _read_geo('BlockGroups_bg')
+        def _standardize_geo_input(geo_in):
+            """Helper function to check and standardize inputs."""
+            if isinstance(geo_in, str):
+                _check_geo_name(geo_in)
+                return geo_in
+            elif isinstance(geo_in, int):
+                _check_geo_index(geo_in)
+                return self.geographies.iloc[geo_in]
 
-            elif geography == 5:
-                return _read_geo('CBSAs_cb')
+        def _get_where_clause(selector, selection_field, query_string):
+            """Helper function to consolidate where clauses."""
+            # set up the where clause based on input
+            if query_string:
+                return query_string
+
+            elif selection_field and selector:
+                return f"{selection_field} LIKE '%{selector}%'"
+
+            else:
+                return None
+
+        # standardize the geography input
+        geo = _standardize_geo_input(geography)
+        aoi_geo = _standardize_geo_input(aoi_geography)
+
+        # consolidate selection
+        where_clause = _get_where_clause(selector, selection_field, query_string)
+        aoi_where_clause = _get_where_clause(aoi_selector, aoi_selection_field, aoi_query_string)
+
+        return geo, aoi_geo, where_clause, aoi_where_clause
+
+    @use_local_vs_gis
+    def get_geography(self, geography: [str, int], selector: str = None,
+                      selection_field: str = 'NAME', query_string: str = None, aoi_geography: [str, int] = None,
+                      aoi_selector: str = None, aoi_selection_field: str = 'NAME',
+                      aoi_query_string: str = None) -> pd.DataFrame:
+        """
+        Get a dataframe at an available geography level. Since frequently working within an area of interest defined
+        by a higher level of geography, typically a CBSA or DMA, the ability to specify this area using input
+        parameters is also included. This dramatically speeds up the process of creating the output.
+
+        Args:
+            geography: Either the name or the index of the geography level. This can be discovered using the
+                Country.geographies method.
+            selector: If a specific value can be identified using a string, even if just part of the field value,
+                you can insert it here.
+            selection_field: This is the field to be searched for the string values input into selector.
+            query_string: If a more custom query is desired to filter the output, please use SQL here to specify the
+                query.
+            aoi_geography: Similar to the geography parameter above, the
+            aoi_selector:
+            aoi_selection_field:
+            aoi_query_string:
+
+        Returns: pd.DataFrame as Geography object instance with the requested geographies..
+        """
+        pass
+
+    def get_geography_local(self, geography: [str, int], selector: str = None,
+                            selection_field: str = 'NAME', query_string: str = None, aoi_geography: [str, int] = None,
+                            aoi_selector: str = None, aoi_selection_field: str = 'NAME',
+                            aoi_query_string: str = None) -> pd.DataFrame:
+
+        # preprocess the inputs
+        geo, aoi_geo, where_clause, aoi_where_clause = self._get_geography_preprocessing(geography, selector,
+                                                                                         selection_field,
+                                                                                         query_string, aoi_geography,
+                                                                                         aoi_selector,
+                                                                                         aoi_selection_field,
+                                                                                         aoi_query_string)
+
+        def _fc_to_lyr(geo, query_str):
+            """Helper function to create a feature layer for working with."""
+            df_geo = self.geographies
+            row = df_geo[df_geo['name'] == geo].iloc[0]
+
+            fld_lst = [row['col_id'], row['col_name']]
+            pth = row['feature_class_path']
+
+            if query_string:
+                lyr = arcpy.management.MakeFeatureLayer(str(pth), where_clause=query_str)[0]
+            else:
+                lyr = arcpy.management.MakeFeatureLayer(str(pth))[0]
+
+            return lyr, fld_lst
+
+        # singular geographic retrieval
+        if geography and not aoi_geography:
+            lyr, fld_lst = _fc_to_lyr(geo, where_clause)
+            return self.spatial.from_featureclass(lyr, fields=fld_lst)
+
+        # if using a filter
+        else:
+
+            # select by location to reduce output overhead
+            sel_lyr = arcpy.management.SelectLayerByLocation(
+                in_layer=_fc_to_lyr(geo, where_clause),
+                overlap_type='HAVE_THEIR_CENTER_IN',
+                select_features=_fc_to_lyr(aoi_geo, aoi_where_clause)
+            )[0]
+
+            # convert to spatially enabled dataframe and return results
+            return self.spatial.from_featureclass(sel_lyr, fields=out_fld_lst)
 
     def within(self, selecting_area: [pd.DataFrame, arcgis.geometry.Geometry],
-               index_features: bool = False) -> GeographyDataFrame:
+               index_features: bool = False) -> pd.DataFrame:
         """
         Get only features contained within the selecting area.
         """
