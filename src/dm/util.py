@@ -19,12 +19,19 @@ else:
 
 
 def _set_source(self, in_source:[str, arcgis.gis.GIS]=None) -> [str, arcgis.gis.GIS]:
-    """Helper function to check source input."""
+    """
+    Helper function to check source input. The source can be set explicitly, but if nothing is provided, it is
+        assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a """
 
     # if string input is provided, ensure setting to local and lowercase
     if isinstance(in_source, str):
         if in_source.lower() != 'local':
             raise Exception(f'Source must be either "local" or a Web GIS instance, not {in_source}.')
+
+        # TODO: add check for local business analyst data
+        elif in_source.lower() == 'local' and not local_business_analyst:
+            raise Exception(f'If using local source, the Business Analyst extension must be available')
+
         elif in_source.lower() == 'local':
             source = 'local'
 
@@ -32,15 +39,9 @@ def _set_source(self, in_source:[str, arcgis.gis.GIS]=None) -> [str, arcgis.gis.
     if in_source is None and arcpy_avail and local_business_analyst:
         source = 'local'
 
-    # TODO: add check for web gis route and enrich active and error if not available
+    # TODO: add check if web gis routing and enrich active - error if not available
     elif in_source is None and arcgis.env.active_gis:
         source = arcgis.env.active_gis
-
-    # if using local, ensure business analyst is available
-    elif source == 'local' and not local_business_analyst:
-        raise Exception('Local analysis requires the Business Analyst extension. If you want to use a Web GIS'
-                        ' for doing enrichment and routing, please set the source to an instance of'
-                        ' arcgis.gis.GIS.')
 
     # if not using local, use a GIS
     elif isinstance(in_source, arcgis.gis.GIS):
@@ -86,3 +87,72 @@ def set_pro_to_usa_local():
         return True
     except:
         return False
+
+
+def _standardize_geo_input(geo_df, geo_in):
+    """Helper function to check and standardize inputs."""
+    if isinstance(geo_in, str):
+        if geo_in not in geo_df.name.values:
+            names = ', '.join(geo_df.names.values)
+            raise Exception(
+                f'Your selector, "{geo_in}," is not an available selector. Please choose from {names}.')
+        return geo_in
+
+    elif isinstance(geo_in, int) or isinstance(geo_in, float):
+        if geo_in > len(geo_df.index):
+            raise Exception(
+                f'Your selector, "{geo_in}", is beyond the maximum range of available geographies.')
+        return geo_df.iloc[geo_in]['name']
+
+    elif geo_in is None:
+        return None
+
+    else:
+        raise Exception('The geographic selector ust be a string or integer.')
+
+
+def _get_where_clause(selector=None, selection_field='NAME', query_string=None):
+    """Helper function to consolidate where clauses."""
+    # set up the where clause based on input
+    if query_string:
+        return query_string
+
+    elif selection_field and selector:
+        return f"{selection_field} LIKE '%{selector}%'"
+
+    else:
+        return None
+
+
+def get_geography_preprocessing(geo_df: pd.DataFrame, geography: [str, int], selector: str = None,
+                                selection_field: str = 'NAME', query_string: str = None,
+                                aoi_geography: [str, int] = None, aoi_selector: str = None,
+                                aoi_selection_field: str = 'NAME', aoi_query_string: str = None) -> tuple:
+    """Helper function consolidating input parameters for later steps."""
+    # standardize the geography input
+    geo = _standardize_geo_input(geo_df, geography)
+    aoi_geo = _standardize_geo_input(geo_df, aoi_geography)
+
+    # consolidate selection
+    where_clause = _get_where_clause(selector, selection_field, query_string)
+    aoi_where_clause = _get_where_clause(aoi_selector, aoi_selection_field, aoi_query_string)
+
+    return geo, aoi_geo, where_clause, aoi_where_clause
+
+
+def get_lyr_flds_from_geo_df(df_geo, geo, query_str):
+    """Helper function to create a feature layer for working with."""
+    # start by getting the relevant geography row from the data
+    row = df_geo[df_geo['name'] == geo].iloc[0]
+
+    # get the id and name fields along with the path to the data from the row
+    fld_lst = [row['col_id'], row['col_name']]
+    pth = row['data_path']
+
+    # use the query string, if provided, to create and return a layer with the output fields
+    if query_str:
+        lyr = arcpy.management.MakeFeatureLayer(str(pth), where_clause=query_str)[0]
+    else:
+        lyr = arcpy.management.MakeFeatureLayer(str(pth))[0]
+
+    return lyr, fld_lst

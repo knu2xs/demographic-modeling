@@ -51,8 +51,8 @@ def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = '
             col_name = e_fl.find('./SIMPLE_PROPERTY[@name="NameField"]').attrib['value']
 
             bds_lyr_nm = e_fl.find(
-                './ARRAY_PROPERTY[@name="DetalizationLayers"]/COMPLEX_PROPERTY/SIMPLE_PROPERTY[@name="LevelName"]').attrib[
-                'value']
+                './ARRAY_PROPERTY[@name="DetalizationLayers"]/COMPLEX_PROPERTY/SIMPLE_PROPERTY[@name="LevelName"]'
+            ).attrib['value']
             bds_pth = os.path.join(bds_dir, bds_lyr_nm)
 
             fc_pth = _get_path_from_bds(bds_pth)
@@ -64,6 +64,6 @@ def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = '
 
     row_lst = [_get_lyr(e) for e in e_lst_lyrs]
 
-    df = pd.DataFrame(row_lst, columns=['name', 'alias', 'col_id', 'col_name', 'feature_class_path']).dropna()
+    df = pd.DataFrame(row_lst, columns=['name', 'alias', 'col_id', 'col_name', 'data_path']).dropna()
 
     return df.iloc[::-1].reset_index(drop=True)
