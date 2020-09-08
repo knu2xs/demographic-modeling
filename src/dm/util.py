@@ -102,7 +102,7 @@ def standardize_geographic_level_input(geo_df, geo_in):
         if geo_in > len(geo_df.index):
             raise Exception(
                 f'Your selector, "{geo_in}", is beyond the maximum range of available geographies.')
-        return geo_df.iloc[geo_in]['name']
+        return geo_df.iloc[geo_in]['geo_name']
 
     elif geo_in is None:
         return None

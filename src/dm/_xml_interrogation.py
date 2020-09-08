@@ -41,7 +41,7 @@ def _get_lyr(bds_dir, e_lyr):
     return name, alias, col_id, col_name, fc_pth
 
 
-def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = 'USA')->pd.DataFrame:
+def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = 'USA') -> pd.DataFrame:
     """
     Get a df of available demographic geography_level area resolutions.
     Args:
@@ -66,6 +66,6 @@ def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = '
 
     row_lst = [_get_lyr(bds_dir, e) for e in e_lst_lyrs]
 
-    df = pd.DataFrame(row_lst, columns=['name', 'alias', 'col_id', 'col_name', 'feature_class_path']).dropna()
+    df = pd.DataFrame(row_lst, columns=['geo_name', 'geo_alias', 'col_id', 'col_name', 'feature_class_path']).dropna()
 
     return df.iloc[::-1].reset_index(drop=True)

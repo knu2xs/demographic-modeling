@@ -48,23 +48,23 @@ def local_vs_gis(fn):
 class Country:
 
     def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None):
-        self.name = name
+        self.geo_name = name
         self.source = util.set_source(source)
         self._geographies = None
 
         # add on all the geographic resolution levels as properties
-        for nm in self.geographies.name:
+        for nm in self.geographies.geo_name:
             setattr(self, nm, GeographyLevel(nm, self))
 
     def __repr__(self):
-        return self.name
+        return self.geo_name
 
     @property
     def geographies(self):
         """DataFrame of available geographies."""
 
         if self._geographies is None and self.source is 'local':
-            self._geographies = get_heirarchial_geography_dataframe(self.name)
+            self._geographies = get_heirarchial_geography_dataframe(self.geo_name)
 
         elif self._geographies is None and isinstance(self.source, arcgis.gis.GIS):
             raise Exception('Using a GIS instance is not yet implemented.')
@@ -77,7 +77,7 @@ class Country:
         Get a GeographyLevel at an available geography_level level in the country.
 
         Args:
-            geography_index: Either the geographic_level name or the index of the geography_level level. This can be
+            geography_index: Either the geographic_level geo_name or the index of the geography_level level. This can be
                 discovered using the Country.geographies method.
 
         Returns: pd.DataFrame as Geography object instance with the requested geographies.
@@ -86,9 +86,9 @@ class Country:
 
     def _level_local(self, geography_index: [str, int]) -> pd.DataFrame:
         """Local implementation of level."""
-        # get the name of the geography
+        # get the geo_name of the geography
         if isinstance(geography_index, int):
-            nm = self.geographies.iloc[geography_index]['name']
+            nm = self.geographies.iloc[geography_index]['geo_name']
         elif isinstance(geography_index, str):
             nm = geography_index
         else:
@@ -98,26 +98,30 @@ class Country:
         return GeographyLevel(nm, self)
 
 
-@pd.api.extensions.register_dataframe_accessor('geo_level')
-class GeographyLevel:
+class GeographyLevel(pd.DataFrame):
 
-    def __init__(self, geographic_level: [str, int], country: Country, parent_data: pd.DataFrame = None):
+    def __init__(self, geographic_level: [str, int], country: Country, parent_data: [pd.DataFrame, pd.Series] = None,
+                 **kwargs):
+        super().__init__(**kwargs)
         self._cntry = country
         self.source = country.source
-        self.name = self._standardize_geographic_level_input(geographic_level)
+        self.geo_name = self._standardize_geographic_level_input(geographic_level)
         self._resource = None
 
     def __repr__(self):
-        return f'GeographyLevel: {self.name}'
+        return f'GeographyLevel: {self.geo_name}'
 
-    def _standardize_geographic_level_input(self, geo_in:[str, int])->str:
+    def _constructor(self):
+        return GeographyLevel
+
+    def _standardize_geographic_level_input(self, geo_in: [str, int]) -> str:
         """Helper function to check and standardize named input."""
 
         geo_df = self._cntry.geographies
 
         if isinstance(geo_in, str):
-            if geo_in not in geo_df.name.values:
-                names = ', '.join(geo_df.names.values)
+            if geo_in not in geo_df.geo_name.values:
+                names = ', '.join(geo_df.geo_name.values)
                 raise Exception(
                     f'Your selector, "{geo_in}," is not an available selector. Please choose from {names}.')
             geo_lvl_name = geo_in
@@ -126,7 +130,7 @@ class GeographyLevel:
             if geo_in > len(geo_df.index):
                 raise Exception(
                     f'Your selector, "{geo_in}", is beyond the maximum range of available geographies.')
-            geo_lvl_name = geo_df.iloc[geo_in]['name']
+            geo_lvl_name = geo_df.iloc[geo_in]['geo_name']
 
         else:
             raise Exception('The geographic selector must be a string or integer.')
@@ -137,13 +141,13 @@ class GeographyLevel:
     def resource(self):
         """The resource, either a layer or Feature Layer, for accessing the data for the geographic layer."""
         if self._resource is None and self._cntry.source is 'local':
-            self._resource = self._cntry.geographies[self._cntry.geographies['name'] == self.name].iloc[0]['feature_class_path']
+            self._resource = self._cntry.geographies[self._cntry.geographies['geo_name'] == self.geo_name].iloc[0][
+                'feature_class_path']
 
         elif self._resource is None and isinstance(self._cntry.source, arcgis.gis.GIS):
             raise Exception('Using a GIS instance not yet implemented.')
 
         return self._resource
-
 
     @local_vs_gis
     def get(self, geography: [str, int], selector: str = None, selection_field: str = 'NAME',
@@ -184,7 +188,7 @@ class GeographyLevel:
         df_geo = self._cntry.geographies
 
         # get the relevant geography_level row from the data
-        row = df_geo[df_geo['name'] == self.name].iloc[0]
+        row = df_geo[df_geo['geo_name'] == self.geo_name].iloc[0]
 
         # get the id and geographic_level fields along with the path to the data from the row
         fld_lst = [row['col_id'], row['col_name']]
