@@ -9,14 +9,14 @@ import pandas as pd
 from . import util
 from ._xml_interrogation import get_heirarchial_geography_dataframe
 from ._registry import get_ba_demographic_gdb_path
-from ._modify_geoaccessor import GeoAccessorIO
+from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 
 if util.arcpy_avail:
     import arcpy
 
 
 def local_vs_gis(fn):
-    # get the method name - this will be used to redirect the function call
+    # get the method geographic_level - this will be used to redirect the function call
     method_name = fn.__name__
 
     @wraps(fn)
@@ -45,126 +45,157 @@ def local_vs_gis(fn):
     return wrapped
 
 
-class Country(pd.DataFrame):
+class Country:
 
-    def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
+    def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None):
         self.name = name
-        self.source = util._set_source(source)
+        self.source = util.set_source(source)
+        self._geographies = None
+
+        # add on all the geographic resolution levels as properties
+        for nm in self.geographies.name:
+            setattr(self, nm, GeographyLevel(nm, self))
+
+    def __repr__(self):
+        return self.name
 
     @property
-    def geographies(self) -> pd.DataFrame:
+    def geographies(self):
         """DataFrame of available geographies."""
-        return get_heirarchial_geography_dataframe(self.name)
+
+        if self._geographies is None and self.source is 'local':
+            self._geographies = get_heirarchial_geography_dataframe(self.name)
+
+        elif self._geographies is None and isinstance(self.source, arcgis.gis.GIS):
+            raise Exception('Using a GIS instance is not yet implemented.')
+
+        return self._geographies
 
     @local_vs_gis
-    def get_geography(self, geography: [str, int], selector: str = None,
-                      selection_field: str = 'NAME', query_string: str = None, aoi_geography: [str, int] = None,
-                      aoi_selector: str = None, aoi_selection_field: str = 'NAME',
-                      aoi_query_string: str = None) -> pd.DataFrame:
+    def level(self, geography_index: [str, int]) -> pd.DataFrame:
         """
-        Get a df at an available geography level. Since frequently working within an area of interest defined
-        by a higher level of geography, typically a CBSA or DMA, the ability to specify this area using input
+        Get a GeographyLevel at an available geography_level level in the country.
+
+        Args:
+            geography_index: Either the geographic_level name or the index of the geography_level level. This can be
+                discovered using the Country.geographies method.
+
+        Returns: pd.DataFrame as Geography object instance with the requested geographies.
+        """
+        pass
+
+    def _level_local(self, geography_index: [str, int]) -> pd.DataFrame:
+        """Local implementation of level."""
+        # get the name of the geography
+        if isinstance(geography_index, int):
+            nm = self.geographies.iloc[geography_index]['name']
+        elif isinstance(geography_index, str):
+            nm = geography_index
+        else:
+            raise Exception(f'geography_index must be either a string or integer, not {type(geography_index)}')
+
+        # create a GeographyLevel object instance
+        return GeographyLevel(nm, self)
+
+
+@pd.api.extensions.register_dataframe_accessor('geo_level')
+class GeographyLevel:
+
+    def __init__(self, geographic_level: [str, int], country: Country, parent_data: pd.DataFrame = None):
+        self._cntry = country
+        self.source = country.source
+        self.name = self._standardize_geographic_level_input(geographic_level)
+        self._resource = None
+
+    def __repr__(self):
+        return f'GeographyLevel: {self.name}'
+
+    def _standardize_geographic_level_input(self, geo_in:[str, int])->str:
+        """Helper function to check and standardize named input."""
+
+        geo_df = self._cntry.geographies
+
+        if isinstance(geo_in, str):
+            if geo_in not in geo_df.name.values:
+                names = ', '.join(geo_df.names.values)
+                raise Exception(
+                    f'Your selector, "{geo_in}," is not an available selector. Please choose from {names}.')
+            geo_lvl_name = geo_in
+
+        elif isinstance(geo_in, int) or isinstance(geo_in, float):
+            if geo_in > len(geo_df.index):
+                raise Exception(
+                    f'Your selector, "{geo_in}", is beyond the maximum range of available geographies.')
+            geo_lvl_name = geo_df.iloc[geo_in]['name']
+
+        else:
+            raise Exception('The geographic selector must be a string or integer.')
+
+        return geo_lvl_name
+
+    @property
+    def resource(self):
+        """The resource, either a layer or Feature Layer, for accessing the data for the geographic layer."""
+        if self._resource is None and self._cntry.source is 'local':
+            self._resource = self._cntry.geographies[self._cntry.geographies['name'] == self.name].iloc[0]['feature_class_path']
+
+        elif self._resource is None and isinstance(self._cntry.source, arcgis.gis.GIS):
+            raise Exception('Using a GIS instance not yet implemented.')
+
+        return self._resource
+
+
+    @local_vs_gis
+    def get(self, geography: [str, int], selector: str = None, selection_field: str = 'NAME',
+            query_string: str = None) -> pd.DataFrame:
+        """
+        Get a df at an available geography_level level. Since frequently working within an area of interest defined
+        by a higher level of geography_level, typically a CBSA or DMA, the ability to specify this area using input
         parameters is also included. This dramatically speeds up the process of creating the output.
 
         Args:
-            geography: Either the name or the index of the geography level. This can be discovered using the
+            geography: Either the geographic_level or the index of the geography_level level. This can be discovered using the
                 Country.geographies method.
             selector: If a specific value can be identified using a string, even if just part of the field value,
                 you can insert it here.
             selection_field: This is the field to be searched for the string values input into selector.
             query_string: If a more custom query is desired to filter the output, please use SQL here to specify the
                 query.
-            aoi_geography: Similar to the geography parameter above, the
-            aoi_selector:
-            aoi_selection_field:
-            aoi_query_string:
 
-        Returns: pd.DataFrame as Geography object instance with the requested geographies..
+        Returns: pd.DataFrame as Geography object instance with the requested geographies.
         """
         pass
 
-    def _get_geography_local(self, geography: [str, int], selector: str = None,
-                            selection_field: str = 'NAME', query_string: str = None, aoi_geography: [str, int] = None,
-                            aoi_selector: str = None, aoi_selection_field: str = 'NAME',
-                            aoi_query_string: str = None) -> pd.DataFrame:
-        """Local analysis implementation of get_geography function."""
-        # preprocess the inputs
-        geo, aoi_geo, sql, aoi_sql = util.get_geography_preprocessing(self.geographies, geography, selector,
-                                                                      selection_field, query_string, aoi_geography,
-                                                                      aoi_selector, aoi_selection_field,
-                                                                      aoi_query_string)
-        # get a single instance of the geographies to avoid recreating multiple times
-        df_geo = self.geographies
+    def _get_local(self, selector: [str, list] = None, selection_field: str = 'NAME',
+                   query_string: str = None) -> pd.DataFrame:
 
-        # singular geographic retrieval
-        if geo and aoi_geo is None:
-            lyr, fld_lst = util.get_lyr_flds_from_geo_df(df_geo, geo, sql)
-            out_df = self.spatial.from_featureclass(lyr, fields=fld_lst)
-
-        # if using a spatial filter
+        # set up the where clause based on input enabling overriding using a custom query if desired
+        if query_string:
+            sql = query_string
+        elif selection_field and isinstance(selector, list):
+            sql_lst = [f"UPPER({selection_field}) LIKE UPPER('%{sel}%')" for sel in selector]
+            sql = ' OR '.join(sql_lst)
+        elif selection_field and isinstance(selector, str):
+            sql = f"UPPER({selection_field}) LIKE UPPER('%{selector}%')"
         else:
+            sql = None
 
-            # get the relevant layer information for both the
-            lyr, fld_lst = util.get_lyr_flds_from_geo_df(df_geo, geo, sql)
-            aoi_lyr = util.get_lyr_flds_from_geo_df(df_geo, aoi_geo, aoi_sql)[0]
+        # simplify by setting local variable to the geography_index levels dataframe
+        df_geo = self._cntry.geographies
 
-            # select by location to reduce output overhead
-            sel_lyr = arcpy.management.SelectLayerByLocation(
-                in_layer=lyr,
-                overlap_type='HAVE_THEIR_CENTER_IN',
-                select_features=aoi_lyr
-            )[0]
+        # get the relevant geography_level row from the data
+        row = df_geo[df_geo['name'] == self.name].iloc[0]
 
-            # convert to spatially enabled df and return results
-            out_df = self.spatial.from_featureclass(sel_lyr, fields=fld_lst)
+        # get the id and geographic_level fields along with the path to the data from the row
+        fld_lst = [row['col_id'], row['col_name']]
+        pth = row['feature_class_path']
 
-        # to ensure all properties are retained, set the data and return a copy of this instance
-        self.spatial._data = out_df
-        return self.copy()
-
-    def within(self, selecting_area: [pd.DataFrame, arcgis.geometry.Geometry],
-               index_features: bool = False) -> pd.DataFrame:
-        """
-        Get only features contained within the selecting area.
-
-        Args:
-            selecting_area: Either a Spatially Enabled Pandas DataFame or a Geometry
-                object describing the area of interest for extracting features.
-            index_features: Optional: Boolean describing whether or not to take the
-                time to create spatial indices before extracting features.
-                Default - False
-
-        Returns: Spatially Enabled Pandas DataFrame
-        """
-        if isinstance(selecting_area, arcgis.geometry.Geometry):
-            selecting_df = pd.DataFrame([selecting_area], columns=['SHAPE'])
-            selecting_df.spatial.set_geometry('SHAPE')
-
-        elif isinstance(selecting_area, pd.DataFrame):
-            selecting_df = selecting_area
-
+        # use the query string, if provided, to create and return a layer with the output fields
+        if sql is None:
+            lyr = arcpy.management.MakeFeatureLayer(pth)[0]
         else:
-            raise Exception('Selecting area must be either a Spatially Enabled DataFrame or a Geometry object, not'
-                            f' {type(selecting_area)}.')
+            lyr = arcpy.management.MakeFeatureLayer(pth, where_clause=sql)[0]
 
-        if selecting_df.spatial.validate() is False:
-            raise Exception('The selecting areas DataFrame provided does not appear to be a valid spatially'
-                            ' Enabled DataFrame.')
+        out_df = GeoAccessor.from_featureclass(lyr, fields=fld_lst)
 
-        # convert the geometries to points
-        pts = self.SHAPE.apply(lambda geom: Geometry(
-            {'x': geom.centroid[0], 'y': geom.centroid[1], 'spatialReference': geom.spatial_reference}))
-        pt_df = pts.to_frame().spatial.set_index('SHAPE')
-
-        # index the features being selected if desired
-        if index_features:
-            pt_df.spatial.sindex(stype='rtree')
-
-        # select records falling within the area of interest
-        pt_sel_df = selecting_df.spatial.select(pt_df)
-
-        # get the indices of the selected records, and use them to select the records in the original dataframe
-        return self.iloc[pt_sel_df.index]
+        return out_df

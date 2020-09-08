@@ -1,4 +1,4 @@
-from functools import wraps # This convenience func preserves name and docstring
+from functools import wraps # This convenience func preserves geographic_level and docstring
 import json
 import pathlib
 from typing import IO, AnyStr
@@ -7,6 +7,7 @@ from arcgis.features import GeoAccessor
 from arcgis.geometry import Geometry
 from arcgis.features.geo._internals import register_dataframe_accessor
 import pandas as pd
+
 
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
 def add_method(cls):
@@ -24,6 +25,7 @@ def add_method(cls):
 
     return decorator
 
+
 @register_dataframe_accessor("spatial")
 class GeoAccessorIO(GeoAccessor):
 
@@ -38,7 +40,7 @@ class GeoAccessorIO(GeoAccessor):
         Args:
             df: Spatially Enabled DataFrame
             geometry_column: Optional: Column containing valid Esri Geometry objects. This
-                only needs to be specified if the name of the column is not SHAPE.
+                only needs to be specified if the geographic_level of the column is not SHAPE.
     
         Returns: Pandas DataFrame ready for export.
         """
@@ -87,8 +89,8 @@ class GeoAccessorIO(GeoAccessor):
 
         Args:
             filepath_or_buffer: String or Path object defining location of CSV file.
-            geometry_column: Optional: String column name for the column containing the
-                geometries as Esri JSON. This only needs to be specified if the name of the
+            geometry_column: Optional: String column geographic_level for the column containing the
+                geometries as Esri JSON. This only needs to be specified if the geographic_level of the
                 column is not SHAPE.
 
         Returns: Spatially Enabled Pandas DataFrame
@@ -100,7 +102,8 @@ class GeoAccessorIO(GeoAccessor):
         return cls._convert_geometry_column_to_geometry(cls._data, geometry_column)
 
     @classmethod
-    def read_parquet(cls, path: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE', **kwargs) -> pd.DataFrame:
+    def read_parquet(cls, path: [str, pathlib.Path, IO[AnyStr]],
+                     geometry_column: str = 'SHAPE', **kwargs) -> pd.DataFrame:
         """
         Read a parquet file and convert the geometry column to a geometry objects for a
             fully functioning Spatially Enabled DataFrame. This function also accepts all
@@ -112,8 +115,8 @@ class GeoAccessorIO(GeoAccessor):
 
         Args:
             path: String or Path object defining location of parquet file.
-            geometry_column: Optional: String column name for the column containing the
-                geometries as Esri JSON. This only needs to be specified if the name of the
+            geometry_column: Optional: String column geographic_level for the column containing the
+                geometries as Esri JSON. This only needs to be specified if the geographic_level of the
                 column is not SHAPE.
 
         Returns: Spatially Enabled Pandas DataFrame
@@ -136,7 +139,7 @@ class GeoAccessorIO(GeoAccessor):
                 string. If a file object is passed it should be opened with newline=’’,
                 disabling universal newlines.
             geometry_column: Optional: Column containing valid Esri Geometry objects. This only
-                needs to be specified if the name of the column is not SHAPE.
+                needs to be specified if the geographic_level of the column is not SHAPE.
 
         Returns: String, path or IO object referencing the output.
         """
@@ -158,7 +161,7 @@ class GeoAccessorIO(GeoAccessor):
                 string. If a file object is passed it should be opened with newline=’’,
                 disabling universal newlines.
             geometry_column: Optional: Column containing valid Esri Geometry objects. This only
-                needs to be specified if the name of the column is not SHAPE.
+                needs to be specified if the geographic_level of the column is not SHAPE.
 
         Returns: String, path or IO object referencing the output.
         """

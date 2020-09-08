@@ -18,7 +18,7 @@ else:
     local_business_analyst = False
 
 
-def _set_source(self, in_source:[str, arcgis.gis.GIS]=None) -> [str, arcgis.gis.GIS]:
+def set_source(in_source:[str, arcgis.gis.GIS]=None) -> [str, arcgis.gis.GIS]:
     """
     Helper function to check source input. The source can be set explicitly, but if nothing is provided, it is
         assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a """
@@ -55,7 +55,7 @@ def get_countries(source=None) -> pd.DataFrame:
     # TODO: Handle contingency of BA being available, but data not locally installed.
     # TODO: match df schema between local and remote GIS instance
 
-    src = _set_source(source)
+    src = set_source(source)
 
     if src is 'local':
         keys = ba_data._get_child_keys(r'SOFTWARE\WOW6432Node\Esri\BusinessAnalyst\Datasets')
@@ -72,7 +72,7 @@ def get_countries(source=None) -> pd.DataFrame:
 
         cntry_info_lst = [_get_dataset_info(k) for k in keys]
 
-        return pd.DataFrame(cntry_info_lst, columns=['name', 'country', 'year'])
+        return pd.DataFrame(cntry_info_lst, columns=['geographic_level', 'country', 'year'])
 
     # TODO: return countries available from GIS object instance
 
@@ -89,7 +89,7 @@ def set_pro_to_usa_local():
         return False
 
 
-def _standardize_geo_input(geo_df, geo_in):
+def standardize_geographic_level_input(geo_df, geo_in):
     """Helper function to check and standardize inputs."""
     if isinstance(geo_in, str):
         if geo_in not in geo_df.name.values:
@@ -111,7 +111,7 @@ def _standardize_geo_input(geo_df, geo_in):
         raise Exception('The geographic selector ust be a string or integer.')
 
 
-def _get_where_clause(selector=None, selection_field='NAME', query_string=None):
+def get_geographic_level_where_clause(selector=None, selection_field='NAME', query_string=None):
     """Helper function to consolidate where clauses."""
     # set up the where clause based on input
     if query_string:
@@ -129,23 +129,33 @@ def get_geography_preprocessing(geo_df: pd.DataFrame, geography: [str, int], sel
                                 aoi_geography: [str, int] = None, aoi_selector: str = None,
                                 aoi_selection_field: str = 'NAME', aoi_query_string: str = None) -> tuple:
     """Helper function consolidating input parameters for later steps."""
-    # standardize the geography input
-    geo = _standardize_geo_input(geo_df, geography)
-    aoi_geo = _standardize_geo_input(geo_df, aoi_geography)
+    # standardize the geography_level input
+    geo = standardize_geographic_level_input(geo_df, geography)
+    aoi_geo = standardize_geographic_level_input(geo_df, aoi_geography)
 
     # consolidate selection
-    where_clause = _get_where_clause(selector, selection_field, query_string)
-    aoi_where_clause = _get_where_clause(aoi_selector, aoi_selection_field, aoi_query_string)
+    where_clause = get_geographic_level_where_clause(selector, selection_field, query_string)
+    aoi_where_clause = get_geographic_level_where_clause(aoi_selector, aoi_selection_field, aoi_query_string)
 
     return geo, aoi_geo, where_clause, aoi_where_clause
 
 
-def get_lyr_flds_from_geo_df(df_geo, geo, query_str):
-    """Helper function to create a feature layer for working with."""
-    # start by getting the relevant geography row from the data
-    row = df_geo[df_geo['name'] == geo].iloc[0]
+def get_lyr_flds_from_geo_df(df_geo:pd.DataFrame, geo:str, query_str:str=None):
+    """
+    Get a local feature layer for a geographic level optionally applying a query to filter results.
 
-    # get the id and name fields along with the path to the data from the row
+    Args:
+        df_geo: Pandas DataFrame of available local resources.
+        geo: Name of geographic level.
+        query_str: Optional query string to filter results.
+
+    Returns: Tuple containing an Arcpy FeatureLayer with optional query applied as a definition query filtering results,
+        and a list with the geographic_level of the ID and NAME fields as a tuple to be included in the output.
+    """
+    # start by getting the relevant geography_level row from the data
+    row = df_geo[df_geo['geographic_level'] == geo].iloc[0]
+
+    # get the id and geographic_level fields along with the path to the data from the row
     fld_lst = [row['col_id'], row['col_name']]
     pth = row['data_path']
 
