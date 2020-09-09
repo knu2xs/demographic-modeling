@@ -1,3 +1,4 @@
+from copy import deepcopy
 from functools import wraps
 import os.path
 
@@ -158,8 +159,8 @@ class GeographyLevel(pd.DataFrame):
         parameters is also included. This dramatically speeds up the process of creating the output.
 
         Args:
-            geography: Either the geographic_level or the index of the geography_level level. This can be discovered using the
-                Country.geographies method.
+            geography: Either the geographic_level or the index of the geography_level level. This can be discovered
+                using the Country.geographies method.
             selector: If a specific value can be identified using a string, even if just part of the field value,
                 you can insert it here.
             selection_field: This is the field to be searched for the string values input into selector.
@@ -200,6 +201,7 @@ class GeographyLevel(pd.DataFrame):
         else:
             lyr = arcpy.management.MakeFeatureLayer(pth, where_clause=sql)[0]
 
-        out_df = GeoAccessor.from_featureclass(lyr, fields=fld_lst)
+        # create a spatially enabled dataframe from the data
+        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst)
 
-        return out_df
+        return out_data
