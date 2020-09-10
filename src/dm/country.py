@@ -167,7 +167,7 @@ class GeographyLevel:
     def _get_local(self, selector: [str, list] = None, selection_field: str = 'NAME',
                    query_string: str = None) -> pd.DataFrame:
 
-        return self._get_local_df(selector, selection_field, query_string)
+        return self._get_local_df(selector, selection_field, query_string, self._parent_data)
 
     @local_vs_gis
     def within(self, selecting_geography: [pd.DataFrame, Geometry, list]) -> pd.DataFrame:
