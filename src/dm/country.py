@@ -1,6 +1,4 @@
-from copy import deepcopy
 from functools import wraps
-import os.path
 
 import arcgis.gis
 import arcgis.features
@@ -9,7 +7,6 @@ import pandas as pd
 
 from . import util
 from ._xml_interrogation import get_heirarchial_geography_dataframe
-from ._registry import get_ba_demographic_gdb_path
 from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 
 if util.arcpy_avail:
