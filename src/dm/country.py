@@ -18,7 +18,7 @@ if util.arcpy_avail:
 
 def local_vs_gis(fn):
     # get the method geographic_level - this will be used to redirect the function call
-    method_name = fn.__name__
+    fn_name = fn.__name__
 
     @wraps(fn)
     def wrapped(self, *args, **kwargs):
@@ -26,16 +26,16 @@ def local_vs_gis(fn):
         # if performing analysis locally, try to access the function locally, but if not implemented, catch the error
         if self.source == 'local':
             try:
-                fn_to_call = getattr(self, f'_{method_name}_local')
+                fn_to_call = getattr(self, f'_{fn_name}_local')
             except AttributeError:
-                raise AttributeError(f"'{method_name}' not available using 'local' as the source.")
+                raise AttributeError(f"'{fn_name}' not available using 'local' as the source.")
 
         # now, if performing analysis using a Web GIS, then access the function referencing remote resources
         elif isinstance(self.source, arcgis.gis.GIS):
             try:
-                fn_to_call = getattr(self, f'_{method_name}_gis')
+                fn_to_call = getattr(self, f'_{fn_name}_gis')
             except AttributeError:
-                raise AttributeError(f"'{method_name}' not available using a Web GIS as the source.")
+                raise AttributeError(f"'{fn_name}' not available using a Web GIS as the source.")
 
         # if another source, we don't plan on doing that any time soon
         else:
@@ -99,21 +99,17 @@ class Country:
         return GeographyLevel(nm, self)
 
 
-class GeographyLevel(pd.DataFrame):
+class GeographyLevel:
 
-    def __init__(self, geographic_level: [str, int], country: Country, parent_data: [pd.DataFrame, pd.Series] = None,
-                 **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, geographic_level: [str, int], country: Country, parent_data: [pd.DataFrame, pd.Series] = None):
         self._cntry = country
         self.source = country.source
         self.geo_name = self._standardize_geographic_level_input(geographic_level)
         self._resource = None
+        self._parent_data = parent_data
 
     def __repr__(self):
-        return f'GeographyLevel: {self.geo_name}'
-
-    def _constructor(self):
-        return GeographyLevel
+        return f'<class: GeographyLevel - {self.geo_name}>'
 
     def _standardize_geographic_level_input(self, geo_in: [str, int]) -> str:
         """Helper function to check and standardize named input."""
@@ -200,6 +196,116 @@ class GeographyLevel(pd.DataFrame):
             lyr = arcpy.management.MakeFeatureLayer(pth)[0]
         else:
             lyr = arcpy.management.MakeFeatureLayer(pth, where_clause=sql)[0]
+
+        # if there is input parent data, convert to a layer and use this layer to select features from the above layer.
+        if self._parent_data is not None:
+            # get the geometry column
+            geom_col = [col for col in self._parent_data.columns
+                        if self._parent_data[col].dtype.name.lower() == 'geometry'][0]
+
+            # create a list of arcpy geometry objects
+            geom_lst = list(self._parent_data[geom_col].apply(lambda geom: geom.as_arcpy).values)
+
+            # create an feature class in memory
+            tmp_fc = arcpy.management.CopyFeatures(geom_lst, 'memory/tmp_poly')[0]
+
+            # create a layer using the temporary feature class
+            parent_lyr = arcpy.management.MakeFeatureLayer(tmp_fc)[0]
+
+            # select local features using the parent data layer
+            arcpy.management.SelectLayerByLocation(in_layer=lyr, overlap_type='HAVE_THEIR_CENTER_IN',
+                                                   select_features=parent_lyr)
+
+        # create a spatially enabled dataframe from the data
+        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst)
+
+        # get the index of the current geography level
+        self_idx = self._cntry.geographies[self._cntry.geographies['geo_name'] == self.geo_name].index[0]
+
+        # add all the geographic levels as properties on the dataframe
+        for idx in self._cntry.geographies.index:
+            if idx < self_idx:
+                geo_name = self._cntry.geographies.iloc[idx]['geo_name']
+                setattr(out_data, geo_name, GeographyLevel(geo_name, self._cntry, out_data))
+
+        # add the ability to also get the geography by level index as well
+        def get_geo_level_by_index(geo_idx):
+            if geo_idx >= self_idx:
+                raise Exception('The index for the sub-geography level must be less than the parent. You provided an '
+                                f'index of {geo_idx}, which is greater than the parent index of {self_idx}.')
+            geo_nm = df_geo.iloc[geo_idx]['geo_name']
+            return GeographyLevel(geo_nm, self._cntry, out_data)
+
+        setattr(out_data, 'level', get_geo_level_by_index)
+
+        return out_data
+
+    @local_vs_gis
+    def within(self, selecting_geography: [pd.DataFrame, Geometry, list]) -> pd.DataFrame:
+        """
+        Get a df at an available geography_level level falling within a defined selecting geography.
+
+        Args:
+            selecting_geography: Either a Spatially Enabled DataFrame, arcgis.Geometry object instance, or list of
+                arcgis.Geometry objects delineating an area of interest to use for selecting geographies for analysis.
+
+        Returns: pd.DataFrame as Geography object instance with the requested geographies.
+        """
+        pass
+
+    def _within_local(self, selecting_geography: [pd.DataFrame, Geometry, list]) -> pd.DataFrame:
+        """Local implementation of within."""
+        # if a DataFrame, check to ensure is spatial, and convert to list of arcgis Geometry objects
+        if isinstance(selecting_geography, pd.DataFrame):
+            if selecting_geography.spatial.validate() is True:
+                geom_col = [col for col in selecting_geography.columns
+                            if selecting_geography[col].dtype.name.lower() == 'geometry'][0]
+                geom_lst = list(selecting_geography[geom_col].values)
+            else:
+                raise Exception('The provided selecting_geography DataFrame does not appear to be a Spatially Enabled '
+                                'DataFrame or if so, all geometries do not appear to be valid.')
+
+        # if a list, ensure all child objects are polygon geometries and convert to list of arcpy.Geometry objects
+        if isinstance(selecting_geography, list):
+            for geom in selecting_geography:
+                if not isinstance(geom, Geometry):
+                    raise Exception('The provided geometries in the selecting_geometry list do not appear to all be '
+                                    'valid.')
+            geom_lst = [geom.as_arcpy for geom in selecting_geography]
+
+        # if a single geometry object instance, ensure is polygon and make into single item list of arcpy.Geometry
+        if isinstance(selecting_geography, Geometry):
+            geom_lst = [selecting_geography]
+
+        # ensure all geometries are polygons
+        for geom in geom_lst:
+            if geom.geometry_type != 'polygon':
+                raise Exception('selecting_geography geometries must be polygons. It appears you have provided at '
+                                f'least one "{geom.geometry_type}" geometry.')
+
+        # convert the arcgis Geometry objects to arcpy Geometry objects
+        arcpy_geom_lst = [geom.as_arcpy for geom in geom_lst]
+
+        # create feature class and layer of selecting_geometries for making selection
+        tmp_fc = arcpy.management.CopyFeatures(arcpy_geom_lst, 'memory/tmp_sel_geo')[0]
+        sel_lyr = arcpy.management.MakeFeatureLayer(tmp_fc)[0]
+
+        # simplify by setting local variable to the geography_index levels dataframe
+        df_geo = self._cntry.geographies
+
+        # get the relevant geography_level row from the data
+        row = df_geo[df_geo['geo_name'] == self.geo_name].iloc[0]
+
+        # get the id and geographic_level fields along with the path to the data from the row
+        fld_lst = [row['col_id'], row['col_name']]
+        pth = row['feature_class_path']
+
+        # use the query string, if provided, to create and return a layer with the output fields
+        lyr = arcpy.management.MakeFeatureLayer(pth)[0]
+
+        # select local features using the parent data layer
+        arcpy.management.SelectLayerByLocation(in_layer=lyr, overlap_type='HAVE_THEIR_CENTER_IN',
+                                               select_features=sel_lyr)
 
         # create a spatially enabled dataframe from the data
         out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst)

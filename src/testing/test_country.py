@@ -56,6 +56,11 @@ def test_get_geography_local_implicit_int(usa_local):
     assert isinstance(df, pd.DataFrame)
 
 
-def test_get_geography_local_within(usa_local):
-    df = usa_local.cbsas.get('seattle').counties
+def test_get_geography_local_subgeography(usa_local):
+    df = usa_local.cbsas.get('seattle').counties.get()
     assert isinstance(df, pd.DataFrame)
+
+
+def test_get_geography_local_within_df(usa_local):
+    sel_df = usa_local.cbsas.get('seattle')
+    df = usa_local.level(0).within(sel_df)
