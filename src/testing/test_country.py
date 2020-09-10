@@ -64,3 +64,4 @@ def test_get_geography_local_subgeography(usa_local):
 def test_get_geography_local_within_df(usa_local):
     sel_df = usa_local.cbsas.get('seattle')
     df = usa_local.level(0).within(sel_df)
+    assert isinstance(df, pd.DataFrame)
