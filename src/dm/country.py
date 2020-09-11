@@ -6,7 +6,7 @@ from arcgis.geometry import Geometry
 import pandas as pd
 
 from . import util
-from ._xml_interrogation import get_heirarchial_geography_dataframe
+from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
 from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 
 if util.arcpy_avail:
@@ -48,6 +48,7 @@ class Country:
     def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None):
         self.geo_name = name
         self.source = util.set_source(source)
+        self._enrich_variables = None
         self._geographies = None
 
         # add on all the geographic resolution levels as properties
@@ -58,9 +59,19 @@ class Country:
         return f'<class: Country - {self.geo_name}>'
 
     @property
+    def enrich_variables(self):
+        """DataFrame of all the available geoenrichment variables."""
+        if self._enrich_variables is None and self.source is 'local':
+            self._enrich_variables = get_enrich_variables_dataframe(self.geo_name)
+
+        elif self._enrich_variables is None and isinstance(self.source, arcgis.gis.GIS):
+            raise Exception('Using a GIS instance is not yet implemented.')
+
+        return self._enrich_variables
+
+    @property
     def geographies(self):
         """DataFrame of available geographies."""
-
         if self._geographies is None and self.source is 'local':
             self._geographies = get_heirarchial_geography_dataframe(self.geo_name)
 

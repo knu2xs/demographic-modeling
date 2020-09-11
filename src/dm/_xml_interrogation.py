@@ -1,4 +1,7 @@
+import itertools
 import os
+from pathlib import Path
+import re
 import xml.etree.ElementTree as ET
 
 import pandas as pd
@@ -69,3 +72,118 @@ def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = '
     df = pd.DataFrame(row_lst, columns=['geo_name', 'geo_alias', 'col_id', 'col_name', 'feature_class_path']).dropna()
 
     return df.iloc[::-1].reset_index(drop=True)
+
+
+def _is_hidden(field_element):
+    """
+    Helper function to determine if an xml element is hidden or not.
+    Args:
+        field_element: ElementTree field element from an enrich collection file.
+
+    Returns: Boolean
+    """
+    if 'HideInDataBrowser' in field_element.attrib and field_element.attrib['HideInDataBrowser'] == 'True':
+        return True
+    else:
+        return False
+
+
+def _get_out_field_name(geoenrichment_field):
+    """
+    Helper function to crate field names used by Business Analyst - useful for reverse lookups.
+    Args:
+        geoenrichment_field:
+
+    Returns: String
+
+    """
+    out_field_name = geoenrichment_field.replace(".", "_")
+
+    # if string starts with a set of digits, replace them with Fdigits
+    out_field_name = re.sub(r"(^\d+)", r"F\1", out_field_name)
+
+    # cut to first 64 characters
+    return out_field_name[:64]
+
+
+def _get_collection_dataframe(collection_file: Path) -> pd.DataFrame:
+    """
+    Helper function to parse a collection file and return a dataframe of enrichment properties.
+    Args:
+        collection_file: Full path object to collection xml file.
+
+    Returns: pd.DataFrame of enrichment variables.
+    """
+    # start by getting access to the file through ElementTree root
+    coll_tree = ET.parse(collection_file)
+    coll_root = coll_tree.getroot()
+
+    # create a list object to populate with property values
+    fld_lst = []
+
+    # collect any raw scalar fields
+    uncalc_ele_fields = coll_root.find('./Calculators/Demographic/Fields')
+    if uncalc_ele_fields is not None:
+        fld_lst.append([(field_ele.attrib['Name'], field_ele.attrib['Alias'], field_ele.attrib['Units'], field_ele.attrib['Vintage'])
+                        for field_ele in uncalc_ele_fields.findall('Field')
+                        if not _is_hidden(field_ele)])
+
+    # collect any calculated field types
+    calc_ele_fields = coll_root.find('./Calculators/Demographic/CalculatedFields')
+    if calc_ele_fields is not None:
+
+        # since there are two types of calculated fields, account for this
+        for field_type in ['PercentCalc', 'Script']:
+            single_fld_lst = [(field_ele.attrib['Name'], field_ele.attrib['Alias'], 'CALCULATED', field_ele.attrib['Vintage'])
+                              for field_ele in calc_ele_fields.findall(field_type)
+                              if not _is_hidden(field_ele)]
+            fld_lst.append(single_fld_lst)
+
+    # combine the results of both uncalculated and calculated fields located into single result
+    field_lst = list(itertools.chain.from_iterable(fld_lst))
+
+    if len(field_lst):
+        # create a dataframe with the field information
+        coll_df = pd.DataFrame(field_lst, columns=['name', 'alias', 'type', 'vintage'])
+
+        # using the collected information, create the really valuable fields
+        coll_df['data_collection'] = collection_file.stem
+        coll_df['enrich_str'] = coll_df.apply(lambda row: f"{row['data_collection']}.{row['name']}", axis='columns')
+        coll_df['enrich_field_name'] = coll_df['enrich_str'].apply(lambda val: _get_out_field_name(val))
+
+    else:
+        coll_df = None
+
+    return coll_df
+
+
+def get_enrich_variables_dataframe(three_letter_country_identifier: str = 'USA') -> pd.DataFrame:
+    """
+    Retrieve a listing of all available enrichment variables for local analysis.
+    Args:
+        three_letter_country_identifier: Just like it sounds, the three letter country identifier. Defaults to 'USA'.
+
+    Returns: pd.DataFrame with variable information.
+    """
+    # get the installation directory where the BA data is installed
+    ba_data_dir = Path(get_ba_key_value('DataInstallDir', three_letter_country_identifier))
+
+    # read the dataset configuration file to get the path to the directory where the enrich data
+    # collection files reside
+    config_xml = ba_data_dir/'dataset_config.xml'
+    config_tree = ET.parse(config_xml)
+    config_root = config_tree.getroot()
+
+    # get a complete list of enrichment collection files, which does not include the enrichment packs (ugh!)
+    coll_dir = ba_data_dir/config_root.find('./data_collections').text
+    coll_xml_lst = [f for f in coll_dir.glob('*') if f.name != 'EnrichmentPacksList.xml']
+
+    # get and combine all the results from the data collection files
+    coll_df_lst = [_get_collection_dataframe(coll_file) for coll_file in coll_xml_lst]
+    coll_df = pd.concat([df for df in coll_df_lst if df is not None])
+
+    # organize the results logically - cleanup
+    coll_df.sort_values(['data_collection', 'name'])
+    coll_df.reset_index(drop=True, inplace=True)
+
+    return coll_df
