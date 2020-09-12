@@ -7,14 +7,13 @@ import arcpy
 
 sys.path.insert(0, os.path.abspath('../'))
 from dm import Country
-from dm._registry import get_ba_key_value
+from dm._registry import get_ba_data_dir_path
 
 # DMA to test against
 test_dma_name = 'seattle'
 
 # get paths to data for stress testing
-ba_data_dir = Path(get_ba_key_value('DataInstallDir', 'USA'))
-gdb = ba_data_dir/'Data'/'Demographic Data'/'USA_ACS_2019.gdb'
+gdb = get_ba_data_dir_path('USA')/'Data'/'Demographic Data'/'USA_ACS_2019.gdb'
 bg_fc = gdb/'BlockGroups_bg'
 dma_fc = gdb/'DMAs_dm'
 
@@ -84,4 +83,6 @@ while not total_success and n_vars > 1 and interval > 1:
 
     # if, when successful, the increased count is greater than the total number of variables, call it a win
     if n_vars > total_vars:
+        n_vars = total_vars
+    elif n_vars == total_vars:
         total_success = True

@@ -66,7 +66,7 @@ def get_ba_country_key_str(three_letter_country_code):
     return [k for k in cntry_key_lst if os.path.basename(k).split('_')[0] == cntry_cd][0]
 
 
-def get_ba_key_value(locator_key, three_letter_country_identifier:str='USA'):
+def get_ba_key_value(locator_key, three_letter_country_identifier: str = 'USA'):
     """
     In the Business Analyst key, get the value corresponding to the provided locator key.
     :param locator_key: Locator key.
@@ -83,16 +83,27 @@ def get_ba_key_value(locator_key, three_letter_country_identifier:str='USA'):
     return winreg.QueryValueEx(key, locator_key)[0]
 
 
-def get_ba_network_dataset_path(three_letter_country_identifier:str='USA')->str:
+def get_ba_data_dir_path(three_letter_country_identifier: str = 'USA') -> str:
+    """
+    Get the path to the root directory where Business Analyst data is stored.
+    Args:
+        three_letter_country_identifier: Three letter country identification code.
+
+    Returns: Path to where Business Analyst data is stored for the country.
+    """
+    return Path(get_ba_key_value('DataInstallDir', 'USA'))
+
+
+def get_ba_network_dataset_path(three_letter_country_identifier: str = 'USA') -> str:
     """
     Get the path to the transportation network dataset.
     :param three_letter_country_identifier: Three letter country identification code.
     :return: String describing resource location.
     """
-    return get_ba_key_value('StreetsNetwork', three_letter_country_identifier)
+    return Path(get_ba_key_value('StreetsNetwork', three_letter_country_identifier))
 
 
-def get_ba_demographic_gdb_path(three_letter_country_identifier:str='USA')->Path:
+def get_ba_demographic_gdb_path(three_letter_country_identifier: str = 'USA') -> Path:
     """
     Get the path to the transportation network dataset.
     :param three_letter_country_identifier: Three letter country identification code.

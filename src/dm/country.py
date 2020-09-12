@@ -127,15 +127,45 @@ class Country:
         # ensure only using enrich_variables or data collections
         if enrich_variables is None and data_collections is None:
             raise Exception('You must provide either enrich_variables or data_collections to perform enrichment')
-        elif enrich_variables and data_collections:
+        elif enrich_variables is not None and data_collections is not None:
             raise Exception('You can only provide enrich_variables or data_collections, not both.')
 
-        # format the enrichment list for performing enrichment
+        # if data collections are provided, get the variables from the geographic variables dataframe
         if data_collections:
             enrich_df = self.enrich_variables[self.enrich_variables.data_collection.isin(data_collections)]
             enrich_variables = enrich_df.drop_duplicates('name')['enrich_str']
 
-        return
+        # if just a single variable is provided pipe it into a list
+        enrich_variables = [enrich_variables] if isinstance(enrich_variables, str) else enrich_variables
+
+        # ensure all the enrich variables are available
+        enrich_vars = pd.Series(enrich_variables)
+        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables.enrich_str)]
+        if len(missing_vars):
+            raise Exception('Some of the variables you provided are not available for enrichment '
+                            f'[{", ".join(missing_vars)}]')
+
+        # combine all the enrichment variables into a single string for input into the enrich tool
+        enrich_str = ';'.join(enrich_variables)
+
+        # convert the geometry column to a list of arcpy geometry objects
+        geom_lst = list(data['SHAPE'].apply(lambda geom: geom.as_arcpy).values)
+
+        # invoke the enrich method to get the data
+        enrich_fc = arcpy.ba.EnrichLayer(
+            in_features=geom_lst,
+            out_feature_class='memory/enrich_tmp',
+            variables=enrich_str
+        )[0]
+
+        # convert the enrich feature class to a dataframe
+        enrich_df = GeoAccessor.from_featureclass(enrich_fc)
+        enrich_df.drop(columns=['SHAPE'], inplace=True)
+
+        # combine the two dataframes for output
+        out_df = pd.concat([data, enrich_df], axis=1, sort=False)
+
+        return out_df
 
 
 class GeographyLevel:
@@ -322,5 +352,8 @@ class GeographyLevel:
             return GeographyLevel(geo_nm, self._cntry, out_data)
 
         setattr(out_data, 'level', get_geo_level_by_index)
+
+        # tack on the country for potential use later
+        setattr(out_data, '_cntry', self._cntry)
 
         return out_data

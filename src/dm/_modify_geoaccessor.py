@@ -6,6 +6,7 @@ from typing import IO, AnyStr
 from arcgis.features import GeoAccessor
 from arcgis.geometry import Geometry
 from arcgis.features.geo._internals import register_dataframe_accessor
+import numpy as np
 import pandas as pd
 
 
@@ -170,3 +171,27 @@ class GeoAccessorIO(GeoAccessor):
 
         # export just like normal
         return self._data.to_parquet(path, **kwargs)
+
+    def enrich(self, enrich_variables: [list, np.array, pd.Series] = None,
+               data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+        """
+        Enrich the DataFrame using the provided enrich variable list or data collections list. Either a variable list
+            or list of data collections can be provided, but not both.
+        Args:
+            enrich_variables: List of data variables for enrichment.
+            data_collections: List of data collections for enrichment.
+
+        Returns: pd.DataFrame with enriched data.
+        """
+        # get the data from the GeoAccessor _data property
+        data = self._data
+
+        #TODO: Ensure the environment is using the correct data source
+
+        # get the country from the data
+        cntry = data._cntry
+
+        # invoke the enrich method from the country
+        out_df = cntry.enrich(data, enrich_variables, data_collections)
+
+        return out_df
