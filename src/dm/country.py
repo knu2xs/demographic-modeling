@@ -3,6 +3,7 @@ from functools import wraps
 import arcgis.gis
 import arcgis.features
 from arcgis.geometry import Geometry
+import numpy as np
 import pandas as pd
 
 from . import util
@@ -105,6 +106,36 @@ class Country:
 
         # create a GeographyLevel object instance
         return GeographyLevel(nm, self)
+
+    @local_vs_gis
+    def enrich(self, data, enrich_variables: [list, np.array, pd.Series] = None,
+               data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+        """
+        Enrich a spatially enabled dataframe using either a list of enrichment variables, or data collections. Either
+            enrich_variables or data_collections must be provided, but not both.
+        Args:
+            data: Spatially Enabled DataFrame with geographies to be enriched.
+            enrich_variables: Optional iterable of enrich variables to use for enriching data.
+            data_collections: Optional iterable of data collections to use for enriching data.
+        Returns: Spatially Enabled DataFrame with enriched data now added.
+        """
+        pass
+
+    def _enrich_local(self, data, enrich_variables: [list, np.array, pd.Series] = None,
+                      data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+        """Implementation of enrich for local analysis."""
+        # ensure only using enrich_variables or data collections
+        if enrich_variables is None and data_collections is None:
+            raise Exception('You must provide either enrich_variables or data_collections to perform enrichment')
+        elif enrich_variables and data_collections:
+            raise Exception('You can only provide enrich_variables or data_collections, not both.')
+
+        # format the enrichment list for performing enrichment
+        if data_collections:
+            enrich_df = self.enrich_variables[self.enrich_variables.data_collection.isin(data_collections)]
+            enrich_variables = enrich_df.drop_duplicates('name')['enrich_str']
+
+        return
 
 
 class GeographyLevel:
