@@ -158,14 +158,21 @@ class Country:
             variables=enrich_str
         )[0]
 
-        # convert the enrich feature class to a dataframe
+        # get the Object ID field for schema cleanup
+        oid_col = arcpy.Describe(enrich_fc).OIDFieldName
+
+        # convert the enrich feature class to a dataframe and do some schema cleanup
         enrich_df = GeoAccessor.from_featureclass(enrich_fc)
-        enrich_df.drop(columns=['SHAPE'], inplace=True)
+        drop_cols = [c for c in enrich_df.columns if c in [oid_col, 'HasData', 'aggregationMethod', 'SHAPE']]
+        enrich_df.drop(columns=drop_cols, inplace=True)
 
         # combine the two dataframes for output
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 
-        return out_df
+        # organize the columns so geometry is the last column
+        attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']
+
+        return out_df[attr_cols]
 
 
 class GeographyLevel:
