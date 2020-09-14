@@ -13,12 +13,20 @@ def _get_path_from_bds(bds_dir, bds_pth):
     bds_tree = ET.parse(bds_pth)
     bds_root = bds_tree.getroot()
 
+    # dig through the xml to get the path to the file geodatabase
     e_src = bds_root.find('.//DataSource')
     gdb = e_src.find('WS').attrib['PathName'].replace('.\\', '')
+
+    # use path to get back the correctly cased path to the geodatabase
+    gdb_pth = Path(os.path.join(bds_dir, gdb))
+    gdb_pth = [pth for pth in gdb_pth.parent.glob(f'*{gdb_pth.name}')][0]
+    gdb = str(gdb_pth)
+
+    # now, get the rest of the path components
     fds = e_src.find('FeatureDataset').attrib['FeatureDataset']
     fc = e_src.find('Dataset').attrib['Dataset']
 
-    return os.path.join(bds_dir, gdb, fds, fc)
+    return os.path.join(gdb, fds, fc)
 
 
 def _get_lyr(bds_dir, e_lyr):

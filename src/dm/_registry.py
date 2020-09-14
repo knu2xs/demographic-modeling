@@ -91,7 +91,7 @@ def get_ba_data_dir_path(three_letter_country_identifier: str = 'USA') -> str:
 
     Returns: Path to where Business Analyst data is stored for the country.
     """
-    return Path(get_ba_key_value('DataInstallDir', 'USA'))
+    return Path(get_ba_key_value('DataInstallDir', three_letter_country_identifier))
 
 
 def get_ba_network_dataset_path(three_letter_country_identifier: str = 'USA') -> str:

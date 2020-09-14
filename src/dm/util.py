@@ -1,5 +1,6 @@
 import importlib.util
 import os
+from pathlib import Path
 
 import arcgis
 from ba_tools import data as ba_data
@@ -72,7 +73,7 @@ def get_countries(source=None) -> pd.DataFrame:
 
         cntry_info_lst = [_get_dataset_info(k) for k in keys]
 
-        return pd.DataFrame(cntry_info_lst, columns=['geographic_level', 'country', 'year'])
+        return pd.DataFrame(cntry_info_lst, columns=['geo_ref', 'country', 'year'])
 
     # TODO: return countries available from GIS object instance
 
@@ -143,7 +144,6 @@ def get_geography_preprocessing(geo_df: pd.DataFrame, geography: [str, int], sel
 def get_lyr_flds_from_geo_df(df_geo:pd.DataFrame, geo:str, query_str:str=None):
     """
     Get a local feature layer for a geographic level optionally applying a query to filter results.
-
     Args:
         df_geo: Pandas DataFrame of available local resources.
         geo: Name of geographic level.
@@ -166,3 +166,41 @@ def get_lyr_flds_from_geo_df(df_geo:pd.DataFrame, geo:str, query_str:str=None):
         lyr = arcpy.management.MakeFeatureLayer(str(pth))[0]
 
     return lyr, fld_lst
+
+
+def add_enrich_aliases(feature_class: [Path, str], country_object_instance) -> None:
+    """
+    Add human readable aliases to an enriched feature class.
+    Args:
+        feature_class: Path to the enriched feature class.
+        country_object_instance: County object instance for the same country used for initial enrichment.
+
+    Returns: None
+    """
+    if not arcpy_avail:
+        raise Exception('add_enrich_aliases requires arcpy to be available since working with ArcGIS Feature Classes')
+
+    # since arcpy tools cannot handle Path objects, convert to string
+    feature_class = str(feature_class) if isinstance(feature_class, Path) else feature_class
+
+    # if, at this point, the path is not a string, something is wrong
+    if not isinstance(feature_class, str):
+        raise Exception(f'The feature_class must be either a Path or string, not {type(feature_class)}.')
+
+    # start by getting a list of all the field names
+    fld_lst = [f.name for f in arcpy.ListFields(feature_class)]
+
+    # iterate through the field names and if the field is an enrich field, add the alias
+    for fld_nm in fld_lst:
+
+        # get a dataframe, a single or no row dataframe, correlating to the field name
+        fld_df = country_object_instance.enrich_variables[
+            country_object_instance.enrich_variables.enrich_field_name.str.contains(fld_nm)]
+
+        # if the field name was found, add the alias
+        if len(fld_df.index):
+            arcpy.management.AlterField(
+                in_table=feature_class,
+                field=fld_nm,
+                new_field_alias=fld_df.iloc[0]['alias']
+            )

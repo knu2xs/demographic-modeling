@@ -65,3 +65,10 @@ def test_get_geography_local_within_df(usa_local):
     sel_df = usa_local.cbsas.get('seattle')
     df = usa_local.level(0).within(sel_df)
     assert isinstance(df, pd.DataFrame)
+
+
+def test_enrich_usa_seattle_level0_keyusfacts(usa_local):
+    enrich_vars = usa_local.enrich_variables[(usa_local.enrich_variables.data_collection == 'KeyUSFacts')
+                                             & (usa_local.enrich_variables.vintage == '2019')].enrich_str
+    df = usa_local.cbsas.get('seattle').level(0).get().spatial.enrich(enrich_vars)
+    assert isinstance(df, pd.DataFrame) and df.spatial.validate()

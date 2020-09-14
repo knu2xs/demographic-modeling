@@ -59,6 +59,13 @@ class Country:
     def __repr__(self):
         return f'<class: Country - {self.geo_name} ({self.source})>'
 
+    def _set_arcpy_ba_country(self):
+        """Helper function to set the country in ArcPy."""
+        cntry_df = util.get_countries()
+        geo_ref = cntry_df[cntry_df['country'] == self.geo_name]['geo_ref'].iloc[0]
+        arcpy.env.baDataSource = f'LOCAL;;{geo_ref}'
+        return
+
     @property
     def enrich_variables(self):
         """DataFrame of all the available geoenrichment variables."""
@@ -151,6 +158,9 @@ class Country:
         # convert the geometry column to a list of arcpy geometry objects
         geom_lst = list(data['SHAPE'].apply(lambda geom: geom.as_arcpy).values)
 
+        # set the arcpy environment to the correct country
+        self._set_arcpy_ba_country()
+
         # invoke the enrich method to get the data
         enrich_fc = arcpy.ba.EnrichLayer(
             in_features=geom_lst,
@@ -169,13 +179,14 @@ class Country:
         # combine the two dataframes for output
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 
+        # organize the columns so geometry is the last column
+        attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']
+        out_df = out_df[attr_cols].copy()
+
         # ensure this dataframe will be recognized as spatially enabled
         out_df.spatial.set_geometry('SHAPE')
 
-        # organize the columns so geometry is the last column
-        attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']
-
-        return out_df[attr_cols]
+        return out_df
 
 
 class GeographyLevel:

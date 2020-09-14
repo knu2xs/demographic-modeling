@@ -144,11 +144,14 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: String, path or IO object referencing the output.
         """
+        # copy the output dataframe to not modify the dataframe in place
+        out_df = self._data.copy()
+
         # convert the geometry column to object(str) in the cls._data property, which is the instance of the df
-        self._data[geometry_column] = self._data[geometry_column].apply(lambda val: val.JSON)
+        out_df[geometry_column] = out_df[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
-        return self._data.to_csv(path_or_buf, **kwargs)
+        return out_df.to_csv(path_or_buf, **kwargs)
 
     def to_parquet(self, path:[str, pathlib.Path, IO[AnyStr]], geometry_column:str= 'SHAPE', **kwargs):
         """
@@ -166,11 +169,14 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: String, path or IO object referencing the output.
         """
+        # copy the output dataframe to not modify the dataframe in place
+        out_df = self._data.copy()
+
         # convert the geometry column to object(str) in the cls._data property, which is the instance of the df
-        self._data[geometry_column] = self._data[geometry_column].apply(lambda val: val.JSON)
+        out_df[geometry_column] = out_df[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
-        return self._data.to_parquet(path, **kwargs)
+        return out_df.to_parquet(path, **kwargs)
 
     def enrich(self, enrich_variables: [list, np.array, pd.Series] = None,
                data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
