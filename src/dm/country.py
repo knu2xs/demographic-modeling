@@ -57,7 +57,7 @@ class Country:
             setattr(self, nm, GeographyLevel(nm, self))
 
     def __repr__(self):
-        return f'<class: Country - {self.geo_name}>'
+        return f'<class: Country - {self.geo_name} ({self.source})>'
 
     @property
     def enrich_variables(self):
@@ -168,6 +168,9 @@ class Country:
 
         # combine the two dataframes for output
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
+
+        # ensure this dataframe will be recognized as spatially enabled
+        out_df.spatial.set_geometry('SHAPE')
 
         # organize the columns so geometry is the last column
         attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']

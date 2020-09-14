@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath('../'))
 from dm import _xml_interrogation as xml_interrogation
 
 
-def test_get_heirarchial_geography_dataframe():
+def test_get_heirarchial_geography_dataframe_usa():
     df = xml_interrogation.get_heirarchial_geography_dataframe()
     assert isinstance(df, pd.DataFrame)
 
