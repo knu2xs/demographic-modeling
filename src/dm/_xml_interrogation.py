@@ -13,7 +13,7 @@ def _get_path_from_bds(bds_dir, bds_pth):
     bds_tree = ET.parse(bds_pth)
     bds_root = bds_tree.getroot()
 
-    e_src = bds_root.find('.//MappingLayer/DataSource')
+    e_src = bds_root.find('.//DataSource')
     gdb = e_src.find('WS').attrib['PathName'].replace('.\\', '')
     fds = e_src.find('FeatureDataset').attrib['FeatureDataset']
     fc = e_src.find('Dataset').attrib['Dataset']
@@ -165,17 +165,8 @@ def get_enrich_variables_dataframe(three_letter_country_identifier: str = 'USA')
 
     Returns: pd.DataFrame with variable information.
     """
-    # get the installation directory where the BA data is installed
-    ba_data_dir = Path(get_ba_key_value('DataInstallDir', three_letter_country_identifier))
-
-    # read the dataset configuration file to get the path to the directory where the enrich data
-    # collection files reside
-    config_xml = ba_data_dir/'dataset_config.xml'
-    config_tree = ET.parse(config_xml)
-    config_root = config_tree.getroot()
-
     # get a complete list of enrichment collection files, which does not include the enrichment packs (ugh!)
-    coll_dir = ba_data_dir/config_root.find('./data_collections').text
+    coll_dir = Path(get_ba_key_value('DataCollectionsDir', three_letter_country_identifier))
     coll_xml_lst = [f for f in coll_dir.glob('*') if f.name != 'EnrichmentPacksList.xml']
 
     # get and combine all the results from the data collection files
