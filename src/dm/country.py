@@ -251,7 +251,8 @@ class GeographyLevel:
                 you can insert it here.
             selection_field: This is the field to be searched for the string values input into selector.
             query_string: If a more custom query is desired to filter the output, please use SQL here to specify the
-                query.
+                query. The normal query is "UPPER(NAME) LIKE UPPER('%<selector>%'). However, if a more specific query
+                is needed, this can be used as the starting point to get more specific.
 
         Returns: pd.DataFrame as Geography object instance with the requested geographies.
         """
@@ -279,12 +280,9 @@ class GeographyLevel:
         """Local implementation of within."""
         return self._get_local_df(selecting_geography=selecting_geography)
 
-    def _get_local_df(self, selector: [str, list] = None, selection_field: str = 'NAME',
-                      query_string: str = None,
-                      selecting_geography: [pd.DataFrame, Geometry, list] = None) -> pd.DataFrame:
-        """Single function handling business logic for both _get_local and _withtin_local."""
-
-        # set up the where clause based on input enabling overriding using a custom query if desired
+    def _get_sql_helper(self, selector: [str, list] = None, selection_field: str = 'NAME',
+                      query_string: str = None):
+        """Helper to handle creation of sql queries for get functions."""
         if query_string:
             sql = query_string
         elif selection_field and isinstance(selector, list):
@@ -294,6 +292,15 @@ class GeographyLevel:
             sql = f"UPPER({selection_field}) LIKE UPPER('%{selector}%')"
         else:
             sql = None
+
+        return sql
+
+    def _get_local_df(self, selector: [str, list] = None, selection_field: str = 'NAME',
+                      query_string: str = None,
+                      selecting_geography: [pd.DataFrame, Geometry, list] = None) -> pd.DataFrame:
+        """Single function handling business logic for both _get_local and _within_local."""
+        # set up the where clause based on input enabling overriding using a custom query if desired
+        sql = self._get_sql_helper(selector, selection_field, query_string)
 
         # if a DataFrame, check to ensure is spatial, and convert to list of arcgis Geometry objects
         if isinstance(selecting_geography, pd.DataFrame):
@@ -305,17 +312,28 @@ class GeographyLevel:
                 raise Exception('The provided selecting_geography DataFrame does not appear to be a Spatially Enabled '
                                 'DataFrame or if so, all geometries do not appear to be valid.')
 
+        # accommodate passing a single row as a series
+        elif isinstance(selecting_geography, pd.Series):
+            if 'SHAPE' not in selecting_geography.keys():
+                raise Exception('SHAPE geometry field must be in the pd.Series to use a pd.Series as input.')
+            else:
+                geom_lst = [selecting_geography['SHAPE']]
+
         # if a list, ensure all child objects are polygon geometries and convert to list of arcpy.Geometry objects
-        if isinstance(selecting_geography, list):
+        elif isinstance(selecting_geography, list):
             for geom in selecting_geography:
                 if not isinstance(geom, Geometry):
                     raise Exception('The provided geometries in the selecting_geometry list do not appear to all be '
                                     'valid.')
-            geom_lst = [geom.as_arcpy for geom in selecting_geography]
+            geom_lst = selecting_geography
 
         # if a single geometry object instance, ensure is polygon and make into single item list of arcpy.Geometry
-        if isinstance(selecting_geography, Geometry):
+        elif isinstance(selecting_geography, Geometry):
             geom_lst = [selecting_geography]
+
+        elif selecting_geography is not None:
+            raise Exception('selecting_geography must be either a Spatially Enabled Dataframe, pd.Series with a SHAPE '
+                            f'column, list or single geometry object, not {type(selecting_geography)}.')
 
         # get the relevant geography_level row from the data
         row = self._cntry.geographies[self._cntry.geographies['geo_name'] == self.geo_name].iloc[0]
@@ -378,3 +396,26 @@ class GeographyLevel:
         setattr(out_data, '_cntry', self._cntry)
 
         return out_data
+
+    @local_vs_gis
+    def get_names(self, selector: [str, list] = None, selection_field: str = 'NAME',
+                  query_string: str = None) -> pd.Series:
+        """
+        Get a Pandas Series of available names based on a test input. This runs the same query as the 'get' method,
+            except does not return geometry, so it runs a lot faster - providing the utility to test names. If
+            no selector string is provided it also provides the ability to see all available names.
+        Returns: pd.Series of name strings.
+        """
+        pass
+
+    def _get_names_local(self, selector: [str, list] = None, selection_field: str = 'NAME',
+                         query_string: str = None) -> pd.Series:
+        """Local implementation of 'get_names'."""
+        # create or use the input query parameters
+        sql = self._get_sql_helper(selector, selection_field, query_string)
+
+        # create an output series of names filtered using the query
+        out_srs = pd.Series(r[0] for r in arcpy.da.SearchCursor(self.resource, field_names='NAME', where_clause=sql))
+        out_srs.name = 'geo_name'
+
+        return out_srs
