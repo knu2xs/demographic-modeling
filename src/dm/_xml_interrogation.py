@@ -57,7 +57,6 @@ def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = '
     Get a df of available demographic geography_level area resolutions.
     Args:
         three_letter_country_identifier: Just like it sounds, the three letter country identifier. Defaults to 'USA'.
-
     Returns: pd.DataFrame ordered from smallest area (block group in USA) to largest area (typically entire country).
     """
     settings_xml = get_ba_key_value('SettingsFile', three_letter_country_identifier)
@@ -87,7 +86,6 @@ def _is_hidden(field_element):
     Helper function to determine if an xml element is hidden or not.
     Args:
         field_element: ElementTree field element from an enrich collection file.
-
     Returns: Boolean
     """
     if 'HideInDataBrowser' in field_element.attrib and field_element.attrib['HideInDataBrowser'] == 'True':
@@ -101,7 +99,6 @@ def _get_out_field_name(geoenrichment_field):
     Helper function to crate field names used by Business Analyst - useful for reverse lookups.
     Args:
         geoenrichment_field:
-
     Returns: String
 
     """
@@ -119,7 +116,6 @@ def _get_collection_dataframe(collection_file: Path) -> pd.DataFrame:
     Helper function to parse a collection file and return a dataframe of enrichment properties.
     Args:
         collection_file: Full path object to collection xml file.
-
     Returns: pd.DataFrame of enrichment variables.
     """
     # start by getting access to the file through ElementTree root
@@ -170,7 +166,6 @@ def get_enrich_variables_dataframe(three_letter_country_identifier: str = 'USA')
     Retrieve a listing of all available enrichment variables for local analysis.
     Args:
         three_letter_country_identifier: Just like it sounds, the three letter country identifier. Defaults to 'USA'.
-
     Returns: pd.DataFrame with variable information.
     """
     # get a complete list of enrichment collection files, which does not include the enrichment packs (ugh!)
@@ -186,3 +181,29 @@ def get_enrich_variables_dataframe(three_letter_country_identifier: str = 'USA')
     coll_df.reset_index(drop=True, inplace=True)
 
     return coll_df
+
+
+def get_business_points_data_path(three_letter_country_identifier: str = 'USA') -> str:
+    """
+    Retrieve the path to the installed business listings feature class.
+    Args:
+        three_letter_country_identifier: Three letter country identifier. Defaults to 'USA'.
+    Returns: String path to the business listings feature class.
+    """
+    # get the path to the directory where business data is stored
+    biz_dir = Path(get_ba_key_value('DemographyDataDir2', three_letter_country_identifier))
+    biz_settings_pth = biz_dir / 'busmetadata.xml'
+
+    # pull the information out of the xml
+    biz_tree = ET.parse(biz_settings_pth)
+    biz_root = biz_tree.getroot()
+    datasource_ele = biz_root.find('.//DataSource')
+
+    # pull out the geodatabase and feature class name
+    gdb = datasource_ele.find('./Workspace').attrib['PathName'].replace('.\\', '')
+    fc = datasource_ele.find('./Dataset').attrib['name']
+
+    # combine the retrieved elements for the full path to the business listings data
+    biz_fc_pth = biz_dir / gdb / fc
+
+    return str(biz_fc_pth)

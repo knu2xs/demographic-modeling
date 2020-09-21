@@ -1,3 +1,4 @@
+from functools import wraps
 import importlib.util
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ from ._registry import get_ba_usa_key_str
 
 # run some checks to see what is available
 arcpy_avail = True if importlib.util.find_spec("arcpy") else False
+
 if arcpy_avail:
     import arcpy
 
@@ -19,7 +21,38 @@ else:
     local_business_analyst = False
 
 
-def set_source(in_source:[str, arcgis.gis.GIS]=None) -> [str, arcgis.gis.GIS]:
+def local_vs_gis(fn):
+    """Decorator to facilitate bridging between local and remote resources."""
+    # get the method geographic_level - this will be used to redirect the function call
+    fn_name = fn.__name__
+
+    @wraps(fn)
+    def wrapped(self, *args, **kwargs):
+
+        # if performing analysis locally, try to access the function locally, but if not implemented, catch the error
+        if self.source == 'local':
+            try:
+                fn_to_call = getattr(self, f'_{fn_name}_local')
+            except AttributeError:
+                raise AttributeError(f"'{fn_name}' not available using 'local' as the source.")
+
+        # now, if performing analysis using a Web GIS, then access the function referencing remote resources
+        elif isinstance(self.source, arcgis.gis.GIS):
+            try:
+                fn_to_call = getattr(self, f'_{fn_name}_gis')
+            except AttributeError:
+                raise AttributeError(f"'{fn_name}' not available using a Web GIS as the source.")
+
+        # if another source, we don't plan on doing that any time soon
+        else:
+            raise AttributeError(f"'{self.source}' is not a recognized demographic modeling source.")
+
+        return fn_to_call(*args, **kwargs)
+
+    return wrapped
+
+
+def set_source(in_source: [str, arcgis.gis.GIS] = None) -> [str, arcgis.gis.GIS]:
     """
     Helper function to check source input. The source can be set explicitly, but if nothing is provided, it is
         assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a """
@@ -141,7 +174,7 @@ def get_geography_preprocessing(geo_df: pd.DataFrame, geography: [str, int], sel
     return geo, aoi_geo, where_clause, aoi_where_clause
 
 
-def get_lyr_flds_from_geo_df(df_geo:pd.DataFrame, geo:str, query_str:str=None):
+def get_lyr_flds_from_geo_df(df_geo: pd.DataFrame, geo: str, query_str: str = None):
     """
     Get a local feature layer for a geographic level optionally applying a query to filter results.
     Args:
@@ -204,3 +237,74 @@ def add_enrich_aliases(feature_class: [Path, str], country_object_instance) -> N
                 field=fld_nm,
                 new_field_alias=fld_df.iloc[0]['alias']
             )
+
+
+def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame, pd.Series, arcgis.geometry.Geometry,
+                                                                   list], geometry_filter: str = None) -> list:
+    """
+    Processing helper to convert a iterable of geographies to a list of ArcPy Geometry objects suitable for input
+        into ArcGIS ArcPy geoprocessing tools.
+    Args:
+        geography_iterable: Iterable containing valid geometries.
+        geometry_filter: String point|polyline|polygon to use for validation to ensure correct geometry type.
+    Returns: List of ArcPy objects.
+    """
+    if not arcpy_avail:
+        raise Exception('Converting to ArcPy geometry requires an environment with ArcPy available.')
+
+    # do some error checking on the geometry filter
+    geometry_filter = geometry_filter.lower() if geometry_filter is not None else geometry_filter
+    if geometry_filter not in ['point', 'polyline', 'polygon'] and geometry_filter is not None:
+        raise Exception(f'geometry_filter must be point|polyline|polygon {geometry_filter}')
+
+    # if a DataFrame, check to ensure is spatial, and convert to list of arcgis Geometry objects
+    if isinstance(geography_iterable, pd.DataFrame):
+        if geography_iterable.spatial.validate() is True:
+            geom_col = [col for col in geography_iterable.columns
+                        if geography_iterable[col].dtype.name.lower() == 'geometry'][0]
+            geom_lst = list(geography_iterable[geom_col].values)
+        else:
+            raise Exception('The provided geography_iterable DataFrame does not appear to be a Spatially Enabled '
+                            'DataFrame or if so, all geometries do not appear to be valid.')
+
+    # accommodate handling pd.Series input
+    elif isinstance(geography_iterable, pd.Series):
+        if 'SHAPE' not in geography_iterable.keys() or geography_iterable.name != 'SHAPE':
+            raise Exception('SHAPE geometry field must be in the pd.Series or the pd.Series must be the SHAPE to use '
+                            'a pd.Series as input.')
+
+        # if just a single row passed in
+        elif 'SHAPE' in geography_iterable.keys():
+            geom_lst = [geography_iterable['SHAPE']]
+
+        # otherwise, is a series of geometry objects, and just pass over to geom_lst since will be handled as iterable
+        else:
+            geom_lst = geography_iterable
+
+    # if a list, ensure all child objects are polygon geometries and convert to list of arcpy.Geometry objects
+    elif isinstance(geography_iterable, list):
+        for geom in geography_iterable:
+            if not isinstance(geom, arcgis.geometry.Geometry):
+                raise Exception('The provided geometries in the selecting_geometry list do not appear to all be '
+                                'valid.')
+        geom_lst = geography_iterable
+
+    # if a single geometry object instance, ensure is polygon and make into single item list of arcpy.Geometry
+    elif isinstance(geography_iterable, arcgis.geometry.Geometry):
+        geom_lst = [geography_iterable]
+
+    else:
+        raise Exception('geography_iterable must be either a Spatially Enabled Dataframe, pd.Series with a SHAPE '
+                        f'column, list or single geometry object - not {type(geography_iterable)}.')
+
+    # ensure all geometries are correct geometry type if provided
+    if geometry_filter is not None:
+        for geom in geom_lst:
+            if geom.geometry_type != geometry_filter:
+                raise Exception('geography_iterable geometries must be polygons. It appears you have provided at '
+                                f'least one "{geom.geometry_type}" geometry.')
+
+    # convert the objects in the geometry list to ArcPy Geometry objects
+    arcpy_lst = [geom.as_arcpy for geom in geom_lst]
+
+    return arcpy_lst

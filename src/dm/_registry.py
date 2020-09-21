@@ -88,7 +88,6 @@ def get_ba_data_dir_path(three_letter_country_identifier: str = 'USA') -> str:
     Get the path to the root directory where Business Analyst data is stored.
     Args:
         three_letter_country_identifier: Three letter country identification code.
-
     Returns: Path to where Business Analyst data is stored for the country.
     """
     return Path(get_ba_key_value('DataInstallDir', three_letter_country_identifier))

@@ -7,41 +7,13 @@ import numpy as np
 import pandas as pd
 
 from . import util
-from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
+from .businesses import Business
+from .util import local_vs_gis
 from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
+from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
 
 if util.arcpy_avail:
     import arcpy
-
-
-def local_vs_gis(fn):
-    # get the method geographic_level - this will be used to redirect the function call
-    fn_name = fn.__name__
-
-    @wraps(fn)
-    def wrapped(self, *args, **kwargs):
-
-        # if performing analysis locally, try to access the function locally, but if not implemented, catch the error
-        if self.source == 'local':
-            try:
-                fn_to_call = getattr(self, f'_{fn_name}_local')
-            except AttributeError:
-                raise AttributeError(f"'{fn_name}' not available using 'local' as the source.")
-
-        # now, if performing analysis using a Web GIS, then access the function referencing remote resources
-        elif isinstance(self.source, arcgis.gis.GIS):
-            try:
-                fn_to_call = getattr(self, f'_{fn_name}_gis')
-            except AttributeError:
-                raise AttributeError(f"'{fn_name}' not available using a Web GIS as the source.")
-
-        # if another source, we don't plan on doing that any time soon
-        else:
-            raise AttributeError(f"'{self.source}' is not a recognized demographic modeling source.")
-
-        return fn_to_call(*args, **kwargs)
-
-    return wrapped
 
 
 class Country:
@@ -51,13 +23,14 @@ class Country:
         self.source = util.set_source(source)
         self._enrich_variables = None
         self._geographies = None
+        self.business = Business(self)
 
         # add on all the geographic resolution levels as properties
         for nm in self.geographies.geo_name:
             setattr(self, nm, GeographyLevel(nm, self))
 
     def __repr__(self):
-        return f'<class: Country - {self.geo_name} ({self.source})>'
+        return f'<dm.Country - {self.geo_name} ({self.source})>'
 
     def _set_arcpy_ba_country(self):
         """Helper function to set the country in ArcPy."""
@@ -297,43 +270,10 @@ class GeographyLevel:
 
     def _get_local_df(self, selector: [str, list] = None, selection_field: str = 'NAME',
                       query_string: str = None,
-                      selecting_geography: [pd.DataFrame, Geometry, list] = None) -> pd.DataFrame:
+                      selecting_geography: [pd.DataFrame, pd.Series, Geometry, list] = None) -> pd.DataFrame:
         """Single function handling business logic for both _get_local and _within_local."""
         # set up the where clause based on input enabling overriding using a custom query if desired
         sql = self._get_sql_helper(selector, selection_field, query_string)
-
-        # if a DataFrame, check to ensure is spatial, and convert to list of arcgis Geometry objects
-        if isinstance(selecting_geography, pd.DataFrame):
-            if selecting_geography.spatial.validate() is True:
-                geom_col = [col for col in selecting_geography.columns
-                            if selecting_geography[col].dtype.name.lower() == 'geometry'][0]
-                geom_lst = list(selecting_geography[geom_col].values)
-            else:
-                raise Exception('The provided selecting_geography DataFrame does not appear to be a Spatially Enabled '
-                                'DataFrame or if so, all geometries do not appear to be valid.')
-
-        # accommodate passing a single row as a series
-        elif isinstance(selecting_geography, pd.Series):
-            if 'SHAPE' not in selecting_geography.keys():
-                raise Exception('SHAPE geometry field must be in the pd.Series to use a pd.Series as input.')
-            else:
-                geom_lst = [selecting_geography['SHAPE']]
-
-        # if a list, ensure all child objects are polygon geometries and convert to list of arcpy.Geometry objects
-        elif isinstance(selecting_geography, list):
-            for geom in selecting_geography:
-                if not isinstance(geom, Geometry):
-                    raise Exception('The provided geometries in the selecting_geometry list do not appear to all be '
-                                    'valid.')
-            geom_lst = selecting_geography
-
-        # if a single geometry object instance, ensure is polygon and make into single item list of arcpy.Geometry
-        elif isinstance(selecting_geography, Geometry):
-            geom_lst = [selecting_geography]
-
-        elif selecting_geography is not None:
-            raise Exception('selecting_geography must be either a Spatially Enabled Dataframe, pd.Series with a SHAPE '
-                            f'column, list or single geometry object, not {type(selecting_geography)}.')
 
         # get the relevant geography_level row from the data
         row = self._cntry.geographies[self._cntry.geographies['geo_name'] == self.geo_name].iloc[0]
@@ -351,14 +291,8 @@ class GeographyLevel:
         # if there is selection data, convert to a layer and use this layer to select features from the above layer.
         if selecting_geography is not None:
 
-            # ensure all geometries are polygons
-            for geom in geom_lst:
-                if geom.geometry_type != 'polygon':
-                    raise Exception('selecting_geography geometries must be polygons. It appears you have provided at '
-                                    f'least one "{geom.geometry_type}" geometry.')
-
-            # create a list of arcpy geometry objects
-            arcpy_geom_lst = [geom.as_arcpy for geom in geom_lst]
+            # convert all the selecting geographies to a list of ArcPy Geometries
+            arcpy_geom_lst = util.geography_iterable_to_arcpy_geometry_list(selecting_geography, 'polygon')
 
             # create an feature class in memory
             tmp_fc = arcpy.management.CopyFeatures(arcpy_geom_lst, 'memory/tmp_poly')[0]
