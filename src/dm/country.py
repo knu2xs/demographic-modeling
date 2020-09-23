@@ -17,6 +17,7 @@ if util.arcpy_avail:
     import arcpy
     arcpy.env.overwriteOutput = True
 
+
 class Country:
 
     def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None):
