@@ -44,15 +44,8 @@ def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Spa
     # if arcpy is available, use it to find the transformation
     if arcpy_avail:
 
-        # get any necessary transformations
+        # get any necessary transformations using arcpy, which returns only a list of transformation names
         trns_lst = arcpy.ListTransformations(in_sr.as_arcpy, out_sr.as_arcpy)
-
-        # apply across the geometries using apply since it recognizes the transformation correctly
-        if len(trns_lst):
-            out_df[geom_col_lst[0]] = out_df[geom_col_lst[0]].apply(lambda geom: geom.project_as(out_sr, trns_lst[0]))
-            out_df.spatial.set_geometry('SHAPE')  # makes it recognize the new spatial reference
-        else:
-            out_df.spatial.project(out_sr)
 
     # otherwise we will have to use the geometry rest endpoint to find transformations
     else:
@@ -60,13 +53,19 @@ def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Spa
         # explicitly ensure find_transformations has a gis instance
         gis = active_gis if active_gis else GIS()
 
-        # get any transformations, if needed due to changing geographic spatial reference
+        # get any transformations, if needed due to changing geographic spatial reference, as a list of dicts
         trns_lst = find_transformation(in_sr, out_sr, gis=gis)['transformations']
 
-        # project the dataframe - with a transformation if necessary
-        if len(trns_lst):
-            out_df.spatial.project(out_sr, trns_lst[0])
-        else:
-            out_df.spatial.project(out_sr)
+    # apply across the geometries using apply since it recognizes the transformation correctly if transformation
+    # is necessary and also tries arcpy first, and if not available, rolls back to rest resources elegantly
+    if len(trns_lst):
+        out_df[geom_col_lst[0]] = out_df[geom_col_lst[0]].apply(lambda geom: geom.project_as(out_sr, trns_lst[0]))
+
+    # otherwise, do the same thing using the apply method since the geoaccessor is not working as reliably
+    else:
+        out_df[geom_col_lst[0]] = out_df[geom_col_lst[0]].apply(lambda geom: geom.project_as(out_sr))
+
+    # tell the dataframe to recognize the new spatial reference
+    out_df.spatial.set_geometry(geom_col_lst[0])
 
     return out_df
