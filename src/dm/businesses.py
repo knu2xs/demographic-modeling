@@ -5,6 +5,7 @@ import pandas as pd
 from .util import arcpy_avail, local_vs_gis, geography_iterable_to_arcpy_geometry_list
 from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 from ._xml_interrogation import get_business_points_data_path
+from ._spatial_reference import reproject
 
 if arcpy_avail:
     import arcpy
@@ -52,21 +53,44 @@ class Business(object):
 
         return out_df
 
+    @staticmethod
+    def _add_std_cols(biz_df: pd.DataFrame, id_col: str, name_col: str, local_threshold: int = 0) -> pd.DataFrame:
+        """Helper function adding values in a standard column making follow on analysis workflows easier."""
+        # assign the location id and brand name to standardized columns
+        biz_df['id'] = biz_df[id_col]
+        biz_df['brand_name'] = biz_df[name_col]
+
+        # assign brand name category, identifying local brands based on the count of stores
+        local_srs = biz_df.brand_name.value_counts() > local_threshold
+        brand_names = local_srs[local_srs == True].index.values
+        biz_df['brand_name_category'] = biz_df.brand_name.apply(
+            lambda val: val if val in brand_names else 'local_brand')
+
+        return biz_df
+
     @local_vs_gis
     def get_by_name(self, business_name: str,
-                    area_of_interest: [pd.DataFrame, pd.Series, Geometry, list]) -> pd.DataFrame:
+                    area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
+                    name_column: str = 'CONAME', id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
         """
         Search business listings for a specific business name string.
         Args:
             business_name: String business name to search for.
             area_of_interest: Geometry delineating the area of interest to search for businesses.
+            name_column: Optional - Name of the column with business names to be searched. Default is 'CONAME'
+            id_column: Optional - Name of the column with the value uniquely identifying each business location. Default
+                is 'LOCNUM'.
+            local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
+                business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
+                in a new column.
         Returns: Spatially Enabled DataFrame of businesses
         """
         pass
 
     @local_vs_gis
     def get_by_code(self, category_code: str, area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
-                    code_column: str = 'NAICS') -> pd.DataFrame:
+                    code_column: str = 'NAICS', name_column: str = 'CONAME', id_column: str = 'LOCNUM',
+                    local_threshold: int = 0) -> pd.DataFrame:
         """
         Search for businesses based on business category code. In North America, this typically is either the NAICS or
             SIC code.
@@ -77,6 +101,12 @@ class Business(object):
             area_of_interest: Geographic area to search business listings for businesses in the category.
             code_column: The column in the business listing data to search for the input business code. In the United
                 States, this is either NAICS or SIC. The default is NAICS.
+            name_column: Optional - Name of the column with business names to be searched. Default is 'CONAME'
+            id_column: Optional - Name of the column with the value uniquely identifying each business location. Default
+                is 'LOCNUM'.
+            local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
+                business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
+                in a new column.
         Returns: Spatially Enabled pd.DataFrame
         """
         pass
@@ -84,20 +114,28 @@ class Business(object):
     @local_vs_gis
     def get_competition(self, brand_businesses: pd.DataFrame,
                         area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
-                        code_column: str = 'NAICS') -> pd.DataFrame:
+                        code_column: str = 'NAICS', name_column: str = 'CONAME',
+                        id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
         """
         Get competitors from previously retrieved business listings.
         Args:
             brand_businesses: Previously retrieved business listings.
             area_of_interest: Geographic area to search business listings for competitors.
-            code_column: The column in the data to search for business category codes.
+            name_column: Optional - Name of the column with business names to be searched. Default is 'CONAME'
+            code_column: Optional - The column in the data to search for business category codes. Default is 'NAICS'
+            id_column: Optional - Name of the column with the value uniquely identifying each business location. Default
+                is 'LOCNUM'.
+            local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
+                business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
+                in a new column.
         Returns: Spatially Enabled DataFrame
         """
         pass
 
     def _get_by_code_local(self, category_code: [str, list],
                            area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
-                           code_column: str = 'NAICS') -> pd.DataFrame:
+                           code_column: str = 'NAICS', name_column: str = 'CONAME',
+                           id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
         """Local implementation for get by code."""
         # if the code was input as a number, convert to a string
         category_code = str(category_code) if isinstance(category_code, int) else category_code
@@ -112,18 +150,34 @@ class Business(object):
             raise Exception("The category code must be either a string or list of strings, not "
                             f"'{type(category_code)}'.")
 
-        return self._local_get_by_attribute_and_aoi(sql, area_of_interest)
+        # get using the query and aoi
+        biz_df = self._local_get_by_attribute_and_aoi(sql, area_of_interest)
+
+        # add standard schema columns onto output
+        biz_std_df = self._add_std_cols(biz_df, id_column, name_column, local_threshold)
+
+        return biz_std_df
 
     def _get_by_name_local(self, business_name: str,
-                           area_of_interest: [pd.DataFrame, pd.Series, Geometry, list]) -> pd.DataFrame:
+                           area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
+                           name_column: str = 'CONAME', id_col: str = 'LOCNUM') -> pd.DataFrame:
         """Local implementation for get by name."""
         # select by attributes
-        sql = f"CONAME LIKE UPPER('%{business_name}%')"
-        return self._local_get_by_attribute_and_aoi(sql, area_of_interest)
+        sql = f"UPPER({name_column}) LIKE UPPER('%{business_name}%')"
+
+        # get using the query and aoi
+        biz_df = self._local_get_by_attribute_and_aoi(sql, area_of_interest)
+
+        # add standard schema columns onto output
+        biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
+
+        return biz_std_df
 
     def _get_competition_local(self, brand_businesses: [str, pd.DataFrame],
                                area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
-                               code_column: str = 'NAICS') -> pd.DataFrame:
+                               name_column: str = 'CONAME',
+                               code_column: str = 'NAICS', id_column: str = 'LOCNUM',
+                               local_threshold: int = 0) -> pd.DataFrame:
         """Local implementation for get competition."""
         # create a layer for selection
         aoi_lst = geography_iterable_to_arcpy_geometry_list(area_of_interest, 'polygon')
@@ -134,7 +188,7 @@ class Business(object):
         if isinstance(brand_businesses, str):
 
             # create sql query for identifying the features we are interested in
-            brnd_sql = f"CONAME LIKE UPPER('%{brand_businesses}%')"
+            brnd_sql = f"UPPER({name_column}) LIKE UPPER('%{brand_businesses}%')"
 
             # copy the layer local layer instance
             brnd_lyr = self._get_arcpy_lyr(brnd_sql)
@@ -182,4 +236,7 @@ class Business(object):
         # convert the layer to a spatially enabled dataframe
         comp_df = GeoAccessor.from_featureclass(comp_lyr)
 
-        return comp_df
+        # add standard schema columns onto output
+        biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)
+
+        return biz_std_df

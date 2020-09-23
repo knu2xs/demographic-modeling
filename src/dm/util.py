@@ -2,12 +2,16 @@ from functools import wraps
 import importlib.util
 import os
 from pathlib import Path
+import re
 
 import arcgis
-from ba_tools import data as ba_data
+from arcgis.gis import GIS
+from arcgis.features import FeatureSet, FeatureLayer
+from arcgis.geometry import Geometry
 import pandas as pd
 
-from ._registry import get_ba_usa_key_str
+from ._registry import get_ba_usa_key_str, get_child_key_strs
+from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 
 # run some checks to see what is available
 arcpy_avail = True if importlib.util.find_spec("arcpy") else False
@@ -92,7 +96,7 @@ def get_countries(source=None) -> pd.DataFrame:
     src = set_source(source)
 
     if src is 'local':
-        keys = ba_data._get_child_keys(r'SOFTWARE\WOW6432Node\Esri\BusinessAnalyst\Datasets')
+        keys = get_child_key_strs(r'SOFTWARE\WOW6432Node\Esri\BusinessAnalyst\Datasets')
 
         def _get_dataset_info(key):
             name = os.path.basename(key)
@@ -308,3 +312,160 @@ def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame,
     arcpy_lst = [geom.as_arcpy for geom in geom_lst]
 
     return arcpy_lst
+
+
+def clean_columns(column_list):
+    """
+    Little helper to clean up column names quickly.
+    :param column_list: List of column names.
+    :return: List of cleaned up column names.
+    """
+    def _scrub_col(column):
+        no_spc_char = re.sub(r'[^a-zA-Z0-9_\s]', '', column)
+        no_spaces = re.sub(r'\s', '_', no_spc_char)
+        return re.sub(r'_+', '_', no_spaces)
+    return [_scrub_col(col) for col in column_list]
+
+
+def get_dataframe(in_features, gis=None):
+    """
+    Get a spatially enabled dataframe from the input features provided.
+    :param in_features: Spatially Enabled Dataframe | String path to Feature Class | pathlib.Path object to feature
+        class | ArcGIS Layer object |String url to Feature Service | String Web GIS Item ID
+        Resource to be evaluated and converted to a Spatially Enabled Dataframe.
+    :param gis: Optional GIS object instance for connecting to resources.
+    """
+    # if a path object, convert to a string for following steps to work correctly
+    in_features = str(in_features) if isinstance(in_features, Path) else in_features
+
+    # helper for determining if feature layer
+    def _is_feature_layer(in_ftrs):
+        if hasattr(in_ftrs, 'isFeatureLayer'):
+            return in_ftrs.isFeatureLayer
+        else:
+            return False
+
+    # if already a Spatially Enabled Dataframe, mostly just pass it straight through
+    if isinstance(in_features, pd.DataFrame) and in_features.spatial.validate() is True:
+        df = in_features
+
+    # if a csv previously exported from a Spatially Enabled Dataframe, get it in
+    elif isinstance(in_features, str) and os.path.exists(in_features) and in_features.endswith('.csv'):
+        df = pd.read_csv(in_features)
+        df['SHAPE'] = df['SHAPE'].apply(lambda geom: Geometry(eval(geom)))
+
+        # this almost always is the index written to the csv, so taking care of this
+        if df.columns[0] == 'Unnamed: 0':
+            df = df.set_index('Unnamed: 0')
+            del (df.index.name)
+
+    # create a Spatially Enabled Dataframe from the direct url to the Feature Service
+    elif isinstance(in_features, str) and in_features.startswith('http'):
+
+        # submitted urls can be lacking a few essential pieces, so handle some contingencies with some regex matching
+        regex = re.compile(r'((^https?://.*?)(/\d{1,3})?)\?')
+        srch = regex.search(in_features)
+
+        # if the layer index is included, still clean by dropping any possible trailing url parameters
+        if srch.group(3):
+            in_features = f'{srch.group(1)}'
+
+        # ensure at least the first layer is being referenced if the index was forgotten
+        else:
+            in_features = f'{srch.group(2)}/0'
+
+            # if the layer is unsecured, a gis is not needed, but we have to handle differently
+        if gis is not None:
+            df = FeatureLayer(in_features, gis).query(out_sr=4326, as_df=True)
+        else:
+            df = FeatureLayer(in_features).query(out_sr=4326, as_df=True)
+
+    # create a Spatially Enabled Dataframe from a Web GIS Item ID
+    elif isinstance(in_features, str) and len(in_features) == 32:
+
+        # if publicly shared on ArcGIS Online this anonymous gis can be used to access the resource
+        if gis is None:
+            gis = GIS()
+        itm = gis.content.get(in_features)
+        df = itm.layers[0].query(out_sr=4326, as_df=True)
+
+    elif isinstance(in_features, (str, Path)):
+        df = GeoAccessor.from_featureclass(in_features)
+
+    # create a Spatially Enabled Dataframe from a Layer
+    elif _is_feature_layer(in_features):
+        df = FeatureSet.from_json(arcpy.FeatureSet(in_features).JSON).sdf
+
+    # sometimes there is an issue with modified or sliced dataframes with the SHAPE column not being correctly
+    #    recognized as a geometry column, so try to set it as the geometry...just in case
+    elif isinstance(in_features, pd.DataFrame) and 'SHAPE' in in_features.columns:
+        in_features.spatial.set_geometry('SHAPE')
+        df = in_features
+
+        if df.spatial.validate() is False:
+            raise Exception('Could not process input features for get_dataframe function. Although the input_features '
+                            'appear to be in a Pandas Dataframe, the SHAPE column appears to not contain valid '
+                            'geometries. The Dataframe is not validating using the *.spatial.validate function.')
+
+    else:
+        raise Exception('Could not process input features for get_dataframe function.')
+
+    # ensure the universal spatial column is correctly being recognized
+    df.spatial.set_geometry('SHAPE')
+
+    return df
+
+
+class Environment:
+
+    def __init__(self):
+        self._installed_lst = []
+        self._not_installed_lst = []
+        self._arcpy_extensions = []
+        self._extension_lst = ['3D', 'Datareviewer', 'DataInteroperability', 'Airports', 'Aeronautical', 'Bathymetry',
+                               'Nautical', 'GeoStats', 'Network', 'Spatial', 'Schematics', 'Tracking', 'JTX', 'ArcScan',
+                               'Business', 'Defense', 'Foundation', 'Highways', 'StreetMap']
+
+    def has_package(self, package_name):
+
+        if package_name in self._installed_lst:
+            return True
+
+        elif package_name in self._not_installed_lst:
+            return False
+
+        else:
+            installed = True if importlib.util.find_spec(package_name) else False
+            if installed:
+                self._installed_lst.append(package_name)
+            else:
+                self._not_installed_lst.append(package_name)
+
+        return installed
+
+    @property
+    def arcpy_extensions(self):
+
+        if not arcpy_avail:
+            raise Exception('Since not in an environment with ArcPy available, it is not possible to check available '
+                            'extensions.')
+
+        elif len(self._arcpy_extensions) == 0:
+            import arcpy
+            for extension in self._extension_lst:
+                if arcpy.CheckExtension(extension):
+                    self._arcpy_extensions.append(extension)
+
+        return self._arcpy_extensions
+
+    def arcpy_checkout_extension(self, extension):
+
+        if self.has_package('arcpy') and extension in self.arcpy_extensions:
+            import arcpy
+            arcpy.CheckOutExtension(extension)
+
+        else:
+            raise Exception(f'Cannot check out {extension}. It either is not licensed, not installed, or you are not '
+                            f'using the correct reference ({", ".join(self._extension_lst)}).')
+
+        return True

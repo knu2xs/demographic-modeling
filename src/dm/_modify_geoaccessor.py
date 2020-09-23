@@ -4,10 +4,13 @@ import pathlib
 from typing import IO, AnyStr
 
 from arcgis.features import GeoAccessor
-from arcgis.geometry import Geometry
+from arcgis.geometry import Geometry, SpatialReference
 from arcgis.features.geo._internals import register_dataframe_accessor
 import numpy as np
 import pandas as pd
+import swifter
+
+from ._spatial_reference import reproject
 
 
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
@@ -192,8 +195,6 @@ class GeoAccessorIO(GeoAccessor):
         # get the data from the GeoAccessor _data property
         data = self._data
 
-        #TODO: Ensure the environment is using the correct data source
-
         # get the country from the data
         cntry = data._cntry
 
@@ -201,3 +202,12 @@ class GeoAccessorIO(GeoAccessor):
         out_df = cntry.enrich(data, enrich_variables, data_collections)
 
         return out_df
+
+    def reproject(self, output_spatial_reference: [SpatialReference, int] = 4326):
+        """
+        Project to a new spatial reference, applying an applicable transformation if necessary.
+        Args:
+            output_spatial_reference: The output spatial reference.
+        Returns: Spatially Enabled DataFrame projected to the new spatial reference.
+        """
+        return reproject(self._data, output_spatial_reference)

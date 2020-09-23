@@ -11,10 +11,11 @@ from .businesses import Business
 from .util import local_vs_gis
 from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
+from ._spatial_reference import reproject
 
 if util.arcpy_avail:
     import arcpy
-
+    arcpy.env.overwriteOutput = True
 
 class Country:
 
@@ -159,7 +160,10 @@ class Country:
         # ensure this dataframe will be recognized as spatially enabled
         out_df.spatial.set_geometry('SHAPE')
 
-        return out_df
+        # ensure WGS84
+        out_data = reproject(out_df)
+
+        return out_data
 
 
 class GeographyLevel:
@@ -304,29 +308,33 @@ class GeographyLevel:
             arcpy.management.SelectLayerByLocation(in_layer=lyr, overlap_type='HAVE_THEIR_CENTER_IN',
                                                    select_features=sel_lyr)
 
-        # create a spatially enabled dataframe from the data
-        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst)
+            # clean up arcpy litter
+            for arcpy_resource in [tmp_fc, sel_lyr]:
+                arcpy.management.Delete(arcpy_resource)
+
+        # create a spatially enabled dataframe from the data in WGS84
+        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst).spatial.reproject(4326)
 
         # get the index of the current geography level
         self_idx = self._cntry.geographies[self._cntry.geographies['geo_name'] == self.geo_name].index[0]
 
-        # add all the geographic levels as properties on the dataframe
+        # add all the geographic levels below the current level as properties on the dataframe
         for idx in self._cntry.geographies.index:
             if idx < self_idx:
                 geo_name = self._cntry.geographies.iloc[idx]['geo_name']
                 setattr(out_data, geo_name, GeographyLevel(geo_name, self._cntry, out_data))
 
         # add the ability to also get the geography by level index as well
-        def get_geo_level_by_index(geo_idx):
+        def _get_geo_level_by_index(geo_idx):
             if geo_idx >= self_idx:
                 raise Exception('The index for the sub-geography level must be less than the parent. You provided an '
                                 f'index of {geo_idx}, which is greater than the parent index of {self_idx}.')
             geo_nm = self._cntry.geographies.iloc[geo_idx]['geo_name']
             return GeographyLevel(geo_nm, self._cntry, out_data)
 
-        setattr(out_data, 'level', get_geo_level_by_index)
+        setattr(out_data, 'level', _get_geo_level_by_index)
 
-        # tack on the country for potential use later
+        # tack on the country as a hidden property for potential use later
         setattr(out_data, '_cntry', self._cntry)
 
         return out_data

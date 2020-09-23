@@ -6,8 +6,9 @@ import winreg
 def get_child_key_strs(key_path):
     """
     Get the full path of first generation child keys under the parent key listed.
-    :param key_path: Path to the parent key in registry.
-    :return: List of the full path to child keys.
+    Args:
+        key_path: Path to the parent key in registry.
+    Returns: List of the full path to child keys.
     """
     # open the parent key
     parent_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path)
