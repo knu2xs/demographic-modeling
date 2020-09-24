@@ -5,12 +5,10 @@ from arcgis.features.geo._internals import register_dataframe_accessor
 from arcgis.geometry import Geometry, SpatialReference
 import numpy as np
 import pandas as pd
-import swifter  # needed for swifter apply when converting geometry to strings
 
 from . import utils
 from .businesses import Business
 from .utils import local_vs_gis, env
-# from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
 from ._spatial_reference import reproject
 

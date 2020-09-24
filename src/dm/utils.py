@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import re
 
-import arcgis
+import arcgis.env
 from arcgis.gis import GIS
 from arcgis.features import FeatureSet, FeatureLayer, GeoAccessor
 from arcgis.geometry import Geometry
