@@ -1,4 +1,4 @@
-from functools import wraps # This convenience func preserves geographic_level and docstring
+from functools import wraps  # This convenience func preserves geographic_level and docstring
 import json
 import pathlib
 from typing import IO, AnyStr
@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import swifter
 
-from ._spatial_reference import reproject
+from dm._spatial_reference import reproject
 
 
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
@@ -40,12 +40,12 @@ class GeoAccessorIO(GeoAccessor):
             converting a column froma valid geometry type to an object(str). This is
             required to be able to save a Spatially Enabled DataFrameto flat outputs such
             as CSV and parquet.
-    
+
         Args:
             df: Spatially Enabled DataFrame
             geometry_column: Optional: Column containing valid Esri Geometry objects. This
                 only needs to be specified if the geographic_level of the column is not SHAPE.
-    
+
         Returns: Pandas DataFrame ready for export.
         """
         # check to ensure the geometry field exists in the df
@@ -131,7 +131,7 @@ class GeoAccessorIO(GeoAccessor):
         # set the geometry column
         return cls._convert_geometry_column_to_geometry(cls._data, geometry_column)
 
-    def to_csv(self, path_or_buf:[str, pathlib.Path, IO[AnyStr]], geometry_column:str='SHAPE', **kwargs):
+    def to_csv(self, path_or_buf: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE', **kwargs):
         """
         Export Spatially Enabled DataFrame to a CSV file and handling the special data type for
             the Geometry column. This function, in addition to the geometry column parameter,
@@ -156,7 +156,7 @@ class GeoAccessorIO(GeoAccessor):
         # export just like normal
         return out_df.to_csv(path_or_buf, **kwargs)
 
-    def to_parquet(self, path:[str, pathlib.Path, IO[AnyStr]], geometry_column:str= 'SHAPE', **kwargs):
+    def to_parquet(self, path: [str, pathlib.Path, IO[AnyStr]], geometry_column: str = 'SHAPE', **kwargs):
         """
         Export Spatially Enabled DataFrame to a parquet file and handling the special data type for
             the Geometry column. This function, in addition to the geometry column parameter,
@@ -203,7 +203,7 @@ class GeoAccessorIO(GeoAccessor):
 
         return out_df
 
-    def reproject(self, output_spatial_reference: [SpatialReference, int] = 4326):
+    def project(self, output_spatial_reference: [SpatialReference, int] = 4326):
         """
         Project to a new spatial reference, applying an applicable transformation if necessary.
         Args:

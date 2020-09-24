@@ -8,8 +8,8 @@ from arcgis.geometry import Geometry
 import arcpy
 import pandas as pd
 
-from . import util
-from .util import local_vs_gis
+from . import utils
+from .utils import local_vs_gis
 from ._registry import get_ba_key_value
 
 # location to store temp files if necessary
@@ -244,7 +244,7 @@ def _get_nearest_solution_local(origin_df:pd.DataFrame, destination_df:pd.DataFr
                                 dest_id_fld: str = 'LOCNUM', destination_count: int = 4) -> pd.DataFrame:
     """Local implementation of get nearest solution."""
     # check to make sure network analyst is available using the env object to make it simplier
-    env = util.Environment()
+    env = utils.Environment()
     if 'Network' in env.arcpy_extensions:
         env.arcpy_checkout_extension('Network')
     else:

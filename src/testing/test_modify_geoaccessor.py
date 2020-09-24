@@ -5,7 +5,7 @@ import tempfile
 
 sys.path.insert(0, '../src')
 from dm import Country
-from dm._modify_geoaccessor import GeoAccessorIO
+from dm._accessor._modify_geoaccessor import GeoAccessorIO
 
 
 @pytest.fixture

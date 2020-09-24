@@ -6,6 +6,6 @@ __copyright__ = 'Copyright 2020 by Joel McCune'
 
 # add specific imports below if you want more control over what is visible
 from .country import Country
-from . import util
+from . import utils
 
-__all__ = [util, Country]
+__all__ = [utils, Country]

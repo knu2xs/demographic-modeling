@@ -13,4 +13,4 @@ def test_env_init_local():
 def test_geography_iterable_to_arcpy_geometry_list():
 
     pass
-    assert dm.util.geography_iterable_to_arcpy_geometry_list()
+    assert dm.utils.geography_iterable_to_arcpy_geometry_list()

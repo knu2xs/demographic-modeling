@@ -1,19 +1,20 @@
-from functools import wraps
-
 import arcgis.gis
 import arcgis.features
-from arcgis.geometry import Geometry
+from arcgis.features import GeoAccessor  # adds spatial property to dataframe
+from arcgis.features.geo._internals import register_dataframe_accessor
+from arcgis.geometry import Geometry, SpatialReference
 import numpy as np
 import pandas as pd
+import swifter  # needed for swifter apply when converting geometry to strings
 
-from . import util
+from . import utils
 from .businesses import Business
-from .util import local_vs_gis
-from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
+from .utils import local_vs_gis, env
+# from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
 from ._spatial_reference import reproject
 
-if util.arcpy_avail:
+if env.arcpy_avail:
     import arcpy
     arcpy.env.overwriteOutput = True
 
@@ -22,7 +23,7 @@ class Country:
 
     def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None):
         self.geo_name = name
-        self.source = util.set_source(source)
+        self.source = utils.set_source(source)
         self._enrich_variables = None
         self._geographies = None
         self.business = Business(self)
@@ -36,7 +37,7 @@ class Country:
 
     def _set_arcpy_ba_country(self):
         """Helper function to set the country in ArcPy."""
-        cntry_df = util.get_countries()
+        cntry_df = utils.get_countries()
         geo_ref = cntry_df[cntry_df['country'] == self.geo_name]['geo_ref'].iloc[0]
         arcpy.env.baDataSource = f'LOCAL;;{geo_ref}'
         return
@@ -66,13 +67,16 @@ class Country:
     @local_vs_gis
     def level(self, geography_index: [str, int]) -> pd.DataFrame:
         """
-        Get a GeographyLevel at an available geography_level level in the country.
+        Get a GeographyLevel at an available geography_level level in the
+            country.
 
         Args:
-            geography_index: Either the geographic_level geo_name or the index of the geography_level level. This can be
-                discovered using the Country.geographies method.
+            geography_index: Either the geographic_level geo_name or the
+                index of the geography_level level. This can be discovered
+                using the Country.geographies method.
 
-        Returns: pd.DataFrame as Geography object instance with the requested geographies.
+        Returns: pd.DataFrame as Geography object instance with the
+            requested geographies.
         """
         pass
 
@@ -93,12 +97,18 @@ class Country:
     def enrich(self, data, enrich_variables: [list, np.array, pd.Series] = None,
                data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
         """
-        Enrich a spatially enabled dataframe using either a list of enrichment variables, or data collections. Either
-            enrich_variables or data_collections must be provided, but not both.
+        Enrich a spatially enabled dataframe using either a list of enrichment
+            variables, or data collections. Either enrich_variables or
+            data_collections must be provided, but not both.
+
         Args:
-            data: Spatially Enabled DataFrame with geographies to be enriched.
-            enrich_variables: Optional iterable of enrich variables to use for enriching data.
-            data_collections: Optional iterable of data collections to use for enriching data.
+            data: Spatially Enabled DataFrame with geographies to be
+                enriched.
+            enrich_variables: Optional iterable of enrich variables to use for
+                enriching data.
+            data_collections: Optional iterable of data collections to use for
+                enriching data.
+
         Returns: Spatially Enabled DataFrame with enriched data now added.
         """
         pass
@@ -218,19 +228,23 @@ class GeographyLevel:
     def get(self, geography: [str, int], selector: str = None, selection_field: str = 'NAME',
             query_string: str = None) -> pd.DataFrame:
         """
-        Get a df at an available geography_level level. Since frequently working within an area of interest defined
-        by a higher level of geography_level, typically a CBSA or DMA, the ability to specify this area using input
-        parameters is also included. This dramatically speeds up the process of creating the output.
+        Get a DataFrame at an available geography_level level. Since frequently
+            working within an area of interest defined by a higher level of
+            geography_level, typically a CBSA or DMA, the ability to specify this
+            area using input parameters is also included. This dramatically speeds
+            up the process of creating the output.
 
         Args:
-            geography: Either the geographic_level or the index of the geography_level level. This can be discovered
-                using the Country.geographies method.
-            selector: If a specific value can be identified using a string, even if just part of the field value,
-                you can insert it here.
-            selection_field: This is the field to be searched for the string values input into selector.
-            query_string: If a more custom query is desired to filter the output, please use SQL here to specify the
-                query. The normal query is "UPPER(NAME) LIKE UPPER('%<selector>%'). However, if a more specific query
-                is needed, this can be used as the starting point to get more specific.
+            geography: Either the geographic_level or the index of the geography_level
+                level. This can be discovered using the Country.geographies method.
+            selector: If a specific value can be identified using a string, even if
+                just part of the field value, you can insert it here.
+            selection_field: This is the field to be searched for the string values
+                input into selector.
+            query_string: If a more custom query is desired to filter the output, please
+                use SQL here to specify the query. The normal query is "UPPER(NAME) LIKE
+                UPPER('%<selector>%')". However, if a more specific query is needed, this
+                can be used as the starting point to get more specific.
 
         Returns: pd.DataFrame as Geography object instance with the requested geographies.
         """
@@ -259,7 +273,7 @@ class GeographyLevel:
         return self._get_local_df(selecting_geography=selecting_geography)
 
     def _get_sql_helper(self, selector: [str, list] = None, selection_field: str = 'NAME',
-                      query_string: str = None):
+                        query_string: str = None):
         """Helper to handle creation of sql queries for get functions."""
         if query_string:
             sql = query_string
@@ -297,7 +311,7 @@ class GeographyLevel:
         if selecting_geography is not None:
 
             # convert all the selecting geographies to a list of ArcPy Geometries
-            arcpy_geom_lst = util.geography_iterable_to_arcpy_geometry_list(selecting_geography, 'polygon')
+            arcpy_geom_lst = utils.geography_iterable_to_arcpy_geometry_list(selecting_geography, 'polygon')
 
             # create an feature class in memory
             tmp_fc = arcpy.management.CopyFeatures(arcpy_geom_lst, 'memory/tmp_poly')[0]
@@ -314,29 +328,11 @@ class GeographyLevel:
                 arcpy.management.Delete(arcpy_resource)
 
         # create a spatially enabled dataframe from the data in WGS84
-        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst).spatial.reproject(4326)
+        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst).dm.project(4326)
 
-        # get the index of the current geography level
-        self_idx = self._cntry.geographies[self._cntry.geographies['geo_name'] == self.geo_name].index[0]
-
-        # add all the geographic levels below the current level as properties on the dataframe
-        for idx in self._cntry.geographies.index:
-            if idx < self_idx:
-                geo_name = self._cntry.geographies.iloc[idx]['geo_name']
-                setattr(out_data, geo_name, GeographyLevel(geo_name, self._cntry, out_data))
-
-        # add the ability to also get the geography by level index as well
-        def _get_geo_level_by_index(geo_idx):
-            if geo_idx >= self_idx:
-                raise Exception('The index for the sub-geography level must be less than the parent. You provided an '
-                                f'index of {geo_idx}, which is greater than the parent index of {self_idx}.')
-            geo_nm = self._cntry.geographies.iloc[geo_idx]['geo_name']
-            return GeographyLevel(geo_nm, self._cntry, out_data)
-
-        setattr(out_data, 'level', _get_geo_level_by_index)
-
-        # tack on the country as a hidden property for potential use later
+        # tack on the country and geographic level name for potential use later
         setattr(out_data, '_cntry', self._cntry)
+        setattr(out_data, 'geo_name', self.geo_name)
 
         return out_data
 
@@ -344,9 +340,21 @@ class GeographyLevel:
     def get_names(self, selector: [str, list] = None, selection_field: str = 'NAME',
                   query_string: str = None) -> pd.Series:
         """
-        Get a Pandas Series of available names based on a test input. This runs the same query as the 'get' method,
-            except does not return geometry, so it runs a lot faster - providing the utility to test names. If
-            no selector string is provided it also provides the ability to see all available names.
+        Get a Pandas Series of available names based on a test input. This runs the
+            same query as the 'get' method, except does not return geometry, so it
+            runs a lot faster - providing the utility to test names. If no selector
+            string is provided it also provides the ability to see all available names.
+
+        Args:
+            selector: If a specific value can be identified using a string, even if
+                just part of the field value, you can insert it here.
+            selection_field: This is the field to be searched for the string values
+                input into selector.
+            query_string: If a more custom query is desired to filter the output, please
+                use SQL here to specify the query. The normal query is "UPPER(NAME) LIKE
+                UPPER('%<selector>%'). However, if a more specific query is needed, this
+                can be used as the starting point to get more specific.
+
         Returns: pd.Series of name strings.
         """
         pass
@@ -362,3 +370,102 @@ class GeographyLevel:
         out_srs.name = 'geo_name'
 
         return out_srs
+
+
+@register_dataframe_accessor('dm')
+class DemographicModeling:
+
+    def __init__(self, obj):
+        self._data = obj
+        self._index = obj.index
+
+        # save the country if it is passed from the invoking parent
+        self._cntry = obj._cntry if hasattr(obj, '_cntry') else None
+
+        # if geo_name is a property of the dataframe, is the output of a chained function, and we can add capability
+        if hasattr(obj, 'geo_name'):
+
+            # get the geographic level index
+            self._geo_idx = self._cntry.geographies[self._cntry.geographies['geo_name'] == self._data.geo_name].index[0]
+
+            # add all the geographic levels below the current geographic level as properties
+            for idx in self._cntry.geographies.index:
+                if idx < self._geo_idx:
+                    geo_name = self._cntry.geographies.iloc[idx]['geo_name']
+                    setattr(self, geo_name, GeographyLevel(geo_name, self._cntry, obj))
+
+    def level(self, geographic_level: int) -> GeographyLevel:
+        """
+        Retrieve the GeographyLevel object corresponding to the index returned
+            by the Country.geographies property. This is most useful when
+            retrieving the lowest, most granular, level of geography within a
+            country.
+
+        .. code-block:: python
+            :linenos:
+            from dm import Country
+
+            # create an instance of the country object
+            cntry = Country('USA')
+
+            # the get function returns a dataframe with the 'dm' property
+            metro_df = cntry.cbsas('seattle')
+
+            # level returns a CountryLevel object enabling getting all geographies
+            # falling within the parent dataframe
+            lvl_df = metro_df.dm.level(0).get()
+
+        Args:
+            geographic_level: Integer referencing the index of the geographic level desired.
+
+        Returns: GeographyLevel object instance
+        """
+        assert self._cntry is not None, "The 'dm.level' method requires the parent dataframe be created by the" \
+                                        "Country object."
+
+        assert geographic_level <= self._geo_idx, 'The index for the sub-geography level must be less than the ' \
+                                                  f'parent. You provided an index of {geographic_level}, ' \
+                                                  f'which is greater than the parent index of {self._geo_idx}. '
+
+        # get the name of the geographic level corresponding to the provided index
+        geo_nm = self._cntry.geographies.iloc[geographic_level]['geo_name']
+
+        # create a geographic level object
+        geo_lvl = GeographyLevel(geo_nm, self._cntry, self._data)
+
+        return geo_lvl
+
+    def enrich(self, enrich_variables: [list, np.array, pd.Series] = None,
+               data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+        """
+        Enrich the DataFrame using the provided enrich variable list or data
+            collections list. Either a variable list or list of data
+            collections can be provided, but not both.
+
+        Args:
+            enrich_variables: List of data variables for enrichment.
+            data_collections: List of data collections for enrichment.
+
+        Returns: pd.DataFrame with enriched data.
+        """
+        assert self._cntry is not None, "The 'dm.enrich' method requires the parent dataframe be created by the" \
+                                        "Country object."
+
+        # get the data from the GeoAccessor _data property
+        data = self._data
+
+        # invoke the enrich method from the country
+        out_df = self._cntry.enrich(data, enrich_variables, data_collections)
+
+        return out_df
+
+    def project(self, output_spatial_reference: [SpatialReference, int] = 4326):
+        """
+        Project to a new spatial reference, applying an applicable transformation if necessary.
+
+        Args:
+            output_spatial_reference: Optional - The output spatial reference. Default is 4326 (WGS84).
+
+        Returns: Spatially Enabled DataFrame projected to the new spatial reference.
+        """
+        return reproject(self._data, output_spatial_reference)

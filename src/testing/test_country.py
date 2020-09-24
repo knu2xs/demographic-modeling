@@ -26,11 +26,6 @@ def test_geography_implicit():
     assert isinstance(df, pd.DataFrame)
 
 
-def test_geographies_gis_implicit(usa_agol):
-    df = usa_agol.geographies
-    assert isinstance(df, pd.DataFrame)
-
-
 def test_create_geography_level(usa_local):
     geo_lvl = dm.country.GeographyLevel('block_groups', usa_local)
     assert isinstance(geo_lvl, dm.country.GeographyLevel)
@@ -57,7 +52,8 @@ def test_get_geography_local_implicit_int(usa_local):
 
 
 def test_get_geography_local_subgeography(usa_local):
-    df = usa_local.cbsas.get('seattle').counties.get()
+    cbsa_df = usa_local.cbsas.get('seattle')
+    df = cbsa_df.dm.counties.get()
     assert len(df.index) == 3
 
 
@@ -70,5 +66,13 @@ def test_get_geography_local_within_df(usa_local):
 def test_enrich_usa_seattle_level0_keyusfacts(usa_local):
     enrich_vars = usa_local.enrich_variables[(usa_local.enrich_variables.data_collection == 'KeyUSFacts')
                                              & (usa_local.enrich_variables.vintage == '2019')].enrich_str
-    df = usa_local.cbsas.get('seattle').level(0).get().spatial.enrich(enrich_vars)
+    df = usa_local.cbsas.get('seattle').dm.level(0).get().dm.enrich(enrich_vars)
     assert isinstance(df, pd.DataFrame) and df.spatial.validate()
+
+
+def test_geographies_gis_implicit():
+    with pytest.raises(Exception):
+        gis = GIS()
+        usa_agol = dm.Country('USA', source=gis)
+        df = usa_agol.geographies
+        assert isinstance(df, pd.DataFrame)

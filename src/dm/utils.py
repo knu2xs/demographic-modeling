@@ -6,23 +6,93 @@ import re
 
 import arcgis
 from arcgis.gis import GIS
-from arcgis.features import FeatureSet, FeatureLayer
+from arcgis.features import FeatureSet, FeatureLayer, GeoAccessor
 from arcgis.geometry import Geometry
 import pandas as pd
 
 from ._registry import get_ba_usa_key_str, get_child_key_strs
-from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
+# from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 
-# run some checks to see what is available
 arcpy_avail = True if importlib.util.find_spec("arcpy") else False
 
-if arcpy_avail:
-    import arcpy
 
-if arcpy_avail:
-    local_business_analyst = True if arcpy.CheckExtension('Business') else False
-else:
-    local_business_analyst = False
+class Environment:
+
+    def __init__(self):
+        self._installed_lst = []
+        self._not_installed_lst = []
+        self._arcpy_extensions = []
+        self._extension_lst = ['3D', 'Datareviewer', 'DataInteroperability', 'Airports', 'Aeronautical', 'Bathymetry',
+                               'Nautical', 'GeoStats', 'Network', 'Spatial', 'Schematics', 'Tracking', 'JTX', 'ArcScan',
+                               'Business', 'Defense', 'Foundation', 'Highways', 'StreetMap']
+        self._arcpy_avail = None
+        self._local_ba = None
+
+    @property
+    def arcpy_avail(self):
+        if self._arcpy_avail is None:
+            self._arcpy_avail = True if importlib.util.find_spec("arcpy") else False
+        return self._arcpy_avail
+
+    @property
+    def local_business_analyst(self):
+        if self.arcpy_avail and self._local_ba is None:
+            self._local_ba = True if arcpy.CheckExtension('Business') and self.arcpy_avail else False
+        elif self._local_ba is None:
+            self._local_ba = False
+        return self._local_ba
+
+    def has_package(self, package_name):
+
+        if package_name in self._installed_lst:
+            return True
+
+        elif package_name in self._not_installed_lst:
+            return False
+
+        else:
+            installed = True if importlib.util.find_spec(package_name) else False
+            if installed:
+                self._installed_lst.append(package_name)
+            else:
+                self._not_installed_lst.append(package_name)
+
+        return installed
+
+    @property
+    def arcpy_extensions(self):
+
+        if not self.arcpy_avail:
+            raise Exception('Since not in an environment with ArcPy available, it is not possible to check available '
+                            'extensions.')
+
+        elif len(self._arcpy_extensions) == 0:
+            import arcpy
+            for extension in self._extension_lst:
+                if arcpy.CheckExtension(extension):
+                    self._arcpy_extensions.append(extension)
+
+        return self._arcpy_extensions
+
+    def arcpy_checkout_extension(self, extension):
+
+        if self.has_package('arcpy') and extension in self.arcpy_extensions:
+            import arcpy
+            arcpy.CheckOutExtension(extension)
+
+        else:
+            raise Exception(f'Cannot check out {extension}. It either is not licensed, not installed, or you are not '
+                            f'using the correct reference ({", ".join(self._extension_lst)}).')
+
+        return True
+
+
+# expose instantiated environment object to namespace
+env = Environment()
+
+# import arcpy if possible
+if env.arcpy_avail:
+    import arcpy
 
 
 def local_vs_gis(fn):
@@ -67,14 +137,14 @@ def set_source(in_source: [str, arcgis.gis.GIS] = None) -> [str, arcgis.gis.GIS]
             raise Exception(f'Source must be either "local" or a Web GIS instance, not {in_source}.')
 
         # TODO: add check for local business analyst data
-        elif in_source.lower() == 'local' and not local_business_analyst:
+        elif in_source.lower() == 'local' and not env.local_business_analyst:
             raise Exception(f'If using local source, the Business Analyst extension must be available')
 
         elif in_source.lower() == 'local':
             source = 'local'
 
     # if nothing provided, default to local if arcpy is available, and remote if arcpy not available
-    if in_source is None and arcpy_avail and local_business_analyst:
+    if in_source is None and env.local_business_analyst:
         source = 'local'
 
     # TODO: add check if web gis routing and enrich active - error if not available
@@ -214,7 +284,7 @@ def add_enrich_aliases(feature_class: [Path, str], country_object_instance) -> N
 
     Returns: None
     """
-    if not arcpy_avail:
+    if not env.arcpy_avail:
         raise Exception('add_enrich_aliases requires arcpy to be available since working with ArcGIS Feature Classes')
 
     # since arcpy tools cannot handle Path objects, convert to string
@@ -253,7 +323,7 @@ def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame,
         geometry_filter: String point|polyline|polygon to use for validation to ensure correct geometry type.
     Returns: List of ArcPy objects.
     """
-    if not arcpy_avail:
+    if not env.arcpy_avail:
         raise Exception('Converting to ArcPy geometry requires an environment with ArcPy available.')
 
     # do some error checking on the geometry filter
@@ -414,58 +484,3 @@ def get_dataframe(in_features, gis=None):
     df.spatial.set_geometry('SHAPE')
 
     return df
-
-
-class Environment:
-
-    def __init__(self):
-        self._installed_lst = []
-        self._not_installed_lst = []
-        self._arcpy_extensions = []
-        self._extension_lst = ['3D', 'Datareviewer', 'DataInteroperability', 'Airports', 'Aeronautical', 'Bathymetry',
-                               'Nautical', 'GeoStats', 'Network', 'Spatial', 'Schematics', 'Tracking', 'JTX', 'ArcScan',
-                               'Business', 'Defense', 'Foundation', 'Highways', 'StreetMap']
-
-    def has_package(self, package_name):
-
-        if package_name in self._installed_lst:
-            return True
-
-        elif package_name in self._not_installed_lst:
-            return False
-
-        else:
-            installed = True if importlib.util.find_spec(package_name) else False
-            if installed:
-                self._installed_lst.append(package_name)
-            else:
-                self._not_installed_lst.append(package_name)
-
-        return installed
-
-    @property
-    def arcpy_extensions(self):
-
-        if not arcpy_avail:
-            raise Exception('Since not in an environment with ArcPy available, it is not possible to check available '
-                            'extensions.')
-
-        elif len(self._arcpy_extensions) == 0:
-            import arcpy
-            for extension in self._extension_lst:
-                if arcpy.CheckExtension(extension):
-                    self._arcpy_extensions.append(extension)
-
-        return self._arcpy_extensions
-
-    def arcpy_checkout_extension(self, extension):
-
-        if self.has_package('arcpy') and extension in self.arcpy_extensions:
-            import arcpy
-            arcpy.CheckOutExtension(extension)
-
-        else:
-            raise Exception(f'Cannot check out {extension}. It either is not licensed, not installed, or you are not '
-                            f'using the correct reference ({", ".join(self._extension_lst)}).')
-
-        return True
