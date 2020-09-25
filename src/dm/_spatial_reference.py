@@ -12,6 +12,7 @@ if arcpy_avail:
 
 
 def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, SpatialReference] = 4326,
+              input_spatial_reference: [int, SpatialReference] = None,
               transformation_name: str = None) -> pd.DataFrame:
     """
     Project input Spatially Enabled Dataframe to a desired output spatial reference, applying a
@@ -20,6 +21,8 @@ def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Spa
         input_dataframe: Valid Spatially Enabled DataFrame
         output_spatial_reference: Optional - Desired output Spatial Reference. Default is
             4326 (WGS84).
+        input_spatial_reference: Optional - Only necessary if the Spatial Reference is not
+            properly defined for the input data geometry.
         transformation_name: Optional - Transformation name to be used, if needed, to
             convert between spatial references. If not explicitly provided, this will be
             inferred based on the spatial reference of the input data and desired output
@@ -37,8 +40,36 @@ def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Spa
     # ensure the input spatially enabled dataframe validates
     assert input_dataframe.spatial.validate(), 'The DataFrame does not appear to be valid.'
 
-    # get the input spatial reference for the dataframe
-    in_sr = input_dataframe.spatial.sr
+    # if a spatial reference is set for the dataframe, just use it
+    if input_dataframe.spatial.sr is not None:
+        in_sr = input_dataframe.spatial.sr
+
+    # if a spatial reference is explicitly provided, but the data does not have one set, use the one provided
+    elif input_spatial_reference is not None:
+
+        # check the input
+        assert isinstance(input_spatial_reference, int) or isinstance(input_spatial_reference, SpatialReference), \
+            f'input_spatial_reference must be either an int referencing a wkid or a SpatialReference object, ' \
+            f'not {type(input_spatial_reference)}.'
+
+        if isinstance(input_spatial_reference, int):
+            in_sr = SpatialReference(input_spatial_reference)
+        else:
+            in_sr = input_spatial_reference
+
+    # if the spatial reference is not set, common for data coming from geojson, check if values are in lat/lon
+    # range, and if so, go with WGS84, as this is likely the case if in this range
+    else:
+
+        # get the bounding values for the data
+        x_min, y_min, x_max, y_max = input_dataframe.spatial.full_extent
+
+        # check the range of the values, if in longitude and latitude range
+        wgs_range = True if (x_min > -181 and y_min > -91 and x_max < 181 and y_max < 91) else False
+        assert wgs_range, 'Input data for projection data must have a spatial reference, or one must be provided.'
+
+        # if the values are in range, run with it
+        in_sr = SpatialReference(4326)
 
     # ensure the output spatial reference is a SpatialReference object instance
     if isinstance(output_spatial_reference, SpatialReference):
@@ -72,10 +103,12 @@ def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Spa
         out_df[geom_col] = out_df[geom_col].apply(lambda geom: geom.project_as(out_sr, trns))
 
     # otherwise, do the same thing using the apply method since the geoaccessor project method is not working reliably
-    else:
+    # and only if necessary if the spatial reference is being changed
+    elif in_sr.wkid != out_sr.wkid:
         out_df[geom_col] = out_df[geom_col].apply(lambda geom: geom.project_as(out_sr))
 
     # ensure the dataframe recognizes the new spatial reference
-    out_df.spatial.set_geometry(geom_col)
+    if not out_df.spatial.validate():
+        out_df.spatial.set_geometry(geom_col)
 
     return out_df

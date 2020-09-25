@@ -164,13 +164,13 @@ class Country:
 
         # organize the columns so geometry is the last column
         attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']
-        out_df = out_df[attr_cols].copy()
+        out_df = out_df[attr_cols]
 
         # ensure this dataframe will be recognized as spatially enabled
         out_df.spatial.set_geometry('SHAPE')
 
         # ensure WGS84
-        out_data = reproject(out_df)
+        out_data = out_df.dm.project(4326)
 
         return out_data
 

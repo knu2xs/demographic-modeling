@@ -76,3 +76,11 @@ def test_geographies_gis_implicit():
         usa_agol = dm.Country('USA', source=gis)
         df = usa_agol.geographies
         assert isinstance(df, pd.DataFrame)
+
+
+def test_country_enrich_method_local(usa_local):
+    enrich_vars = usa_local.enrich_variables[(usa_local.enrich_variables.data_collection.str.startswith('KeyUSFacts'))
+                                             & (usa_local.enrich_variables.name.str.endswith('CY'))].enrich_str
+    cnty_df = usa_local.cbsas.get('seattle').dm.counties.get()
+    df = usa_local.enrich(cnty_df, enrich_vars)
+    assert isinstance(df, pd.DataFrame) and df.spatial.validate()

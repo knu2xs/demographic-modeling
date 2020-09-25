@@ -3,11 +3,11 @@ import pandas as pd
 
 from arcgis.features import GeoAccessor
 
+#from .country import DemographicModeling  # so 'dm' pd.DataFrame accessor works
 # from .country import Country
 from .utils import arcpy_avail, local_vs_gis, geography_iterable_to_arcpy_geometry_list
 # from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
 from ._xml_interrogation import get_business_points_data_path
-from ._spatial_reference import reproject
 
 if arcpy_avail:
     import arcpy
@@ -51,7 +51,7 @@ class Business(object):
         lyr = self._local_select_by_location(area_of_interest, lyr)
 
         # convert results to a spatially enabled dataframe
-        out_df = GeoAccessor.from_featureclass(lyr)
+        out_df = GeoAccessor.from_featureclass(lyr).dm.project(4326)
 
         return out_df
 
@@ -235,8 +235,8 @@ class Business(object):
                                                           select_features=brnd_lyr,
                                                           selection_type='REMOVE_FROM_SELECTION')[0]
 
-        # convert the layer to a spatially enabled dataframe
-        comp_df = GeoAccessor.from_featureclass(comp_lyr)
+        # convert the layer to a spatially enabled dataframe in WGS84
+        comp_df = GeoAccessor.from_featureclass(comp_lyr).dm.project(4326)
 
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)
