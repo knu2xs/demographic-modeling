@@ -10,7 +10,7 @@ from . import utils
 from .businesses import Business
 from .utils import local_vs_gis, env
 from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
-from ._spatial_reference import reproject
+from .spatial import project_as
 
 if env.arcpy_avail:
     import arcpy
@@ -471,4 +471,4 @@ class DemographicModeling:
 
         Returns: Spatially Enabled DataFrame projected to the new spatial reference.
         """
-        return reproject(self._data, output_spatial_reference)
+        return project_as(self._data, output_spatial_reference)

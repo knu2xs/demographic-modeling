@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import swifter
 
-from dm._spatial_reference import reproject
+from dm.spatial import project_as
 
 
 # https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
@@ -210,4 +210,4 @@ class GeoAccessorIO(GeoAccessor):
             output_spatial_reference: The output spatial reference.
         Returns: Spatially Enabled DataFrame projected to the new spatial reference.
         """
-        return reproject(self._data, output_spatial_reference)
+        return project_as(self._data, output_spatial_reference)
