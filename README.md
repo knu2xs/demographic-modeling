@@ -1,6 +1,13 @@
 # demographic-modeling-module
 
-Demographic modeling module ideas for ArcGIS Python API
+Demographic Modeling is _opinionated_ tooling for performing demographic analysis using both geography and machine 
+learning.
+
+## Opinionated
+
+No, this set of tooling written in Python is not going to have a political debate with you. Rather, while flexible 
+enough to be used in a variety of ways, this tooling provides a clear way to perform analysis. This enables you to
+get started and be productive as quickly as possible.
 
 ## Getting Started
 
