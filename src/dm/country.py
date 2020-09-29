@@ -128,6 +128,11 @@ class Country:
         # if just a single variable is provided pipe it into a list
         enrich_variables = [enrich_variables] if isinstance(enrich_variables, str) else enrich_variables
 
+        # if the enrich dataframe is passed in, recognize and work with it
+        if isinstance(enrich_variables, pd.DataFrame):
+            if 'enrich_str' in enrich_variables.columns:
+                enrich_variables = enrich_variables['enrich_str']
+
         # ensure all the enrich variables are available
         enrich_vars = pd.Series(enrich_variables)
         missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables.enrich_str)]
