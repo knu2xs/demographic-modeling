@@ -21,7 +21,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../src'))
+sys.path.insert(0, os.path.abspath('../src/dm'))
 
 # -- Project information -----------------------------------------------------
 
@@ -30,7 +30,7 @@ copyright = '2020, Joel McCune'
 author = 'Joel McCune'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.1.0-dev0'
 
 
 # -- General configuration -----------------------------------------------------
