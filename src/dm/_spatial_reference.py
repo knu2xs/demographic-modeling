@@ -107,8 +107,8 @@ def reproject(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Spa
     elif in_sr.wkid != out_sr.wkid:
         out_df[geom_col] = out_df[geom_col].apply(lambda geom: geom.project_as(out_sr))
 
-    # ensure the dataframe recognizes the new spatial reference
-    if not out_df.spatial.validate():
+    # ensure the spatial column is set
+    if not len([c for c in out_df.columns if out_df[c].dtype.name.lower() == 'geometry']):
         out_df.spatial.set_geometry(geom_col)
 
     return out_df
