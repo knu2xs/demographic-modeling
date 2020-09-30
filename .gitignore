@@ -85,6 +85,7 @@ models/
 
 # ignore the caches created for ArcMap
 arcgis/Index
+arcgis/.backups
 
 # my reference - do not want it included in the repo
 src/ba_tools/
