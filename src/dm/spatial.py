@@ -34,7 +34,7 @@ def project_as(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Sp
     # ensure the geometry is set
     geom_col_lst = [c for c in input_dataframe.columns if input_dataframe[c].dtype.name.lower() == 'geometry']
     assert len(geom_col_lst) > 0, 'The DataFrame does not appear to have a geometry column defined. This can be ' \
-                                  'accomplished using the "df.spatial.set_geometry" method.'
+                                  'accomplished using the "input_dataframe.spatial.set_geometry" method.'
 
     # save the geometry column to a variable
     geom_col = geom_col_lst[0]
@@ -79,7 +79,7 @@ def project_as(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Sp
     else:
         out_sr = SpatialReference(output_spatial_reference)
 
-    # copy the input spatial dataframe since the project function changes the dataframe in place
+    # copy the input spatially enabled dataframe since the project function changes the dataframe in place
     out_df = input_dataframe.copy()
     out_df.spatial.set_geometry(geom_col)
 
@@ -116,6 +116,39 @@ def project_as(input_dataframe: pd.DataFrame, output_spatial_reference: [int, Sp
     return out_df
 
 
+def _get_weighted_centroid_geometry(sub_df: pd.DataFrame, weighting_column: str, sptl_ref: SpatialReference,
+                                    geom_col: str = 'SHAPE') -> tuple:
+    """
+    Helper function to calculate centroid coordinates.
+
+    Args:
+        sub_df: DataFrame to calculate weighted coordinates for.
+        weighting_column: Column to be used for weighting.
+        sptl_ref: Spatial reference for the output geometry.
+        geom_col: Optional - Geometry column, defaults to 'SHAPE'.
+
+    Returns: Tuple of weighted centroid coordinates.
+
+    """
+    # check if the weighting sum will be naught
+    wgt_sum = sub_df[weighting_column].sum()
+
+    # if there is a weighting sum, use it
+    if wgt_sum > 0:
+        wgt_x = np.average(sub_df[geom_col].apply(lambda geom: geom.centroid[0]), weights=sub_df[weighting_column])
+        wgt_y = np.average(sub_df[geom_col].apply(lambda geom: geom.centroid[1]), weights=sub_df[weighting_column])
+
+    # if there is not a weighting sum, just get the average centroid
+    else:
+        wgt_x = np.average(sub_df[geom_col].apply(lambda geom: geom.centroid[0]))
+        wgt_y = np.average(sub_df[geom_col].apply(lambda geom: geom.centroid[1]))
+
+    # create a point geometry at the weighted centroid
+    wgt_geom = Geometry({'x': wgt_x, 'y': wgt_y, 'spatialReference': sptl_ref})
+
+    return wgt_geom
+
+
 def get_weighted_centroid(input_dataframe: pd.DataFrame, grouping_column: str, weighting_column: str) -> pd.DataFrame:
     """
     Get a spatially enabled dataframe of weighted centroids identified by a grouping
@@ -127,7 +160,8 @@ def get_weighted_centroid(input_dataframe: pd.DataFrame, grouping_column: str, w
         grouping_column: Column with values for grouping.
         weighting_column: Column with scalar value for weighting.
 
-    Returns: Spatially enabled DataFrame of centroids.
+    Returns: Spatially enabled DataFrame of centroids with the index as values from
+        the grouping column.
 
     """
     # check the input dataframe
@@ -151,10 +185,7 @@ def get_weighted_centroid(input_dataframe: pd.DataFrame, grouping_column: str, w
     sptl_ref = input_dataframe.spatial.sr
 
     # calculate weighted centroids
-    centroid_df = input_dataframe.groupby(grouping_column).apply(lambda sub_df: Geometry({
-        'x': np.average(sub_df[geom_col].apply(lambda geom: geom.centroid[0]), weights=sub_df[weighting_column]),
-        'y': np.average(sub_df[geom_col].apply(lambda geom: geom.centroid[1]), weights=sub_df[weighting_column]),
-        'spatialReference': sptl_ref
-    })).to_frame('SHAPE')
+    centroid_df = input_dataframe.groupby(grouping_column).apply(
+        lambda sub_df: _get_weighted_centroid_geometry(sub_df, weighting_column, sptl_ref, geom_col)).to_frame('SHAPE')
 
     return centroid_df

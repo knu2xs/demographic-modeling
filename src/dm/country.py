@@ -261,7 +261,7 @@ class GeographyLevel:
     @local_vs_gis
     def within(self, selecting_geography: [pd.DataFrame, Geometry, list]) -> pd.DataFrame:
         """
-        Get a df at an available geography_level level falling within a defined selecting geography.
+        Get a input_dataframe at an available geography_level level falling within a defined selecting geography.
 
         Args:
             selecting_geography: Either a Spatially Enabled DataFrame, arcgis.Geometry object instance, or list of

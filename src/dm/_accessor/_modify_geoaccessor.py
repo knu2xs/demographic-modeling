@@ -48,10 +48,10 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: Pandas DataFrame ready for export.
         """
-        # check to ensure the geometry field exists in the df
+        # check to ensure the geometry field exists in the input_dataframe
         if geometry_column not in df.columns.values:
             raise Exception(
-                f'The geometry column provided, "{geometry_column}," does not appear to be in the df columns.')
+                f'The geometry column provided, "{geometry_column}," does not appear to be in the input_dataframe columns.')
 
         # convert the geometry object to a straing for export
         df[geometry_column] = df[geometry_column].swifter.allow_dask_on_strings(True).apply(
@@ -99,7 +99,7 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: Spatially Enabled Pandas DataFrame
         """
-        # read in the pandas df just like normal
+        # read in the pandas input_dataframe just like normal
         cls._data = pd.read_csv(filepath_or_buffer, **kwargs)
 
         # set the geometry column
@@ -125,7 +125,7 @@ class GeoAccessorIO(GeoAccessor):
 
         Returns: Spatially Enabled Pandas DataFrame
         """
-        # read in the pandas df just like normal
+        # read in the pandas input_dataframe just like normal
         cls._data = cls._data.read_csv(path, **kwargs)
 
         # set the geometry column
@@ -150,7 +150,7 @@ class GeoAccessorIO(GeoAccessor):
         # copy the output dataframe to not modify the dataframe in place
         out_df = self._data.copy()
 
-        # convert the geometry column to object(str) in the cls._data property, which is the instance of the df
+        # convert the geometry column to object(str) in the cls._data property, which is the instance of the input_dataframe
         out_df[geometry_column] = out_df[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
@@ -175,7 +175,7 @@ class GeoAccessorIO(GeoAccessor):
         # copy the output dataframe to not modify the dataframe in place
         out_df = self._data.copy()
 
-        # convert the geometry column to object(str) in the cls._data property, which is the instance of the df
+        # convert the geometry column to object(str) in the cls._data property, which is the instance of the input_dataframe
         out_df[geometry_column] = out_df[geometry_column].apply(lambda val: val.JSON)
 
         # export just like normal
