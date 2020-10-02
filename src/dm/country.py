@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import arcgis.gis
 import arcgis.features
 from arcgis.features import GeoAccessor  # adds spatial property to dataframe
@@ -10,7 +12,6 @@ from . import utils
 from .businesses import Business
 from .utils import local_vs_gis, env
 from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
-from .spatial import project_as
 
 if env.arcpy_avail:
     import arcpy
@@ -471,4 +472,57 @@ class DemographicModeling:
 
         Returns: Spatially Enabled DataFrame projected to the new spatial reference.
         """
+        # import needed resources
+        from .spatial import project_as
+
+        # perform the projection
         return project_as(self._data, output_spatial_reference)
+
+    def get_nearest(self, destination_dataframe: pd.DataFrame, source: [str, Path, Country, arcgis.gis.GIS] = None,
+                    single_row_per_origin: bool = True, origin_id_column: str = 'LOCNUM',
+                    destination_id_column: str = 'LOCNUM', destination_count: int = 4, near_prefix: str = None,
+                    destination_columns_to_keep: [str, list] = None) -> pd.DataFrame:
+        """
+        Create a closest destination dataframe using a destination Spatially Enabled
+            Dataframe relative to the parent Spatially enabled DataFrame, but keep each
+            origin and destination still in a discrete row instead of collapsing to a
+            single row per origin. The main reason to use this is if needing the geometry
+            for visualization.
+
+        Args:
+            destination_dataframe: Destination points in one of the supported input formats.
+            source: Optional - Either the path to the network dataset, the Country object
+                associated with the Business Analyst source being used, or a GIS object
+                instance. If invoked from a dataframe created for a country's standard
+                geography levels using the dm accessor, get_nearest will use the parent
+                country properties to ascertain how to perform the networks solve.
+            single_row_per_origin: Optional - Whether or not to pivot the results to return
+                only one row for each origin location. Default is True.
+            origin_id_column: Optional - Column in the origin points Spatially Enabled Dataframe
+                uniquely identifying each feature. Default is 'LOCNUM'.
+            destination_id_column: Column in the destination points Spatially Enabled Dataframe
+                uniquely identifying each feature
+            destination_count: Integer number of destinations to search for from every origin
+                point.
+            near_prefix: String prefix to prepend onto near column names in the output.
+            destination_columns_to_keep: List of columns to keep in the output. Commonly, if
+                businesses, this includes the column with the business names.
+
+        Returns: Spatially Enabled Dataframe with a row for each origin id, and metrics for
+            each nth destinations.
+        """
+        # retrieve resources needed
+        from .proximity import get_nearest
+
+        # if the source is provided,
+        source = self._cntry if source is None else source
+
+        # solve get nearest
+        near_df = get_nearest(self._data, destination_dataframe, source, single_row_per_origin, origin_id_column,
+                              destination_id_column, destination_count, near_prefix, destination_columns_to_keep)
+
+        # if the source is a country, tack it on for any follow-on analysis
+        if isinstance(source, Country):
+            setattr(near_df, '_cntry', source)
+
+        return near_df

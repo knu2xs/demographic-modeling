@@ -1,4 +1,4 @@
-import math
+import importlib
 import os
 from pathlib import Path
 import tempfile
@@ -7,12 +7,17 @@ import uuid
 from arcgis.features import GeoAccessor
 from arcgis.geometry import Geometry
 from arcgis.gis import GIS
-import arcpy
 import pandas as pd
+import numpy as np
 
 from . import utils
-from . import Country
+from .country import Country
 from ._registry import get_ba_key_value
+
+arcpy_avail = True if importlib.util.find_spec("arcpy") else False
+
+if arcpy_avail:
+    import arcpy
 
 # location to store temp files if necessary
 csv_file_prefix = 'temp_closest'
@@ -121,8 +126,8 @@ def _get_nearest_solve_local(origin_dataframe: pd.DataFrame, destination_datafra
 
     Returns: Spatially Enabled Dataframe of solved closest facility routes.
     """
-    for df in [origin_dataframe, destination_dataframe]:
-        assert isinstance(df, pd.DataFrame)
+    # make sure the path to the network dataset is a string
+    network_dataset = str(network_dataset) if isinstance(network_dataset, Path) else network_dataset
 
     # get the mode of travel from the network dataset - rural so gravel roads are fair game
     nd_lyr = arcpy.nax.MakeNetworkDatasetLayer(network_dataset)[0]
@@ -220,7 +225,8 @@ def _reformat_closest_result_dataframe(closest_df: pd.DataFrame):
 
 def _explode_closest_rank_dataframe(closest_df: pd.DataFrame, origin_id_col: str = 'origin_id',
                                     rank_col: str = 'destination_rank',
-                                    dest_id_col: str = 'destination_id'):
+                                    dest_id_col: str = 'destination_id',
+                                    dest_keep_cols: list = None):
     """
     Effectively explode out or pivot the data so there is only a single record for each origin.
 
@@ -238,6 +244,10 @@ def _explode_closest_rank_dataframe(closest_df: pd.DataFrame, origin_id_col: str
     # get a list of the proximity columns
     proximity_cols = [col for col in closest_df.columns if col.startswith('proximity_')]
 
+    # add any destination columns
+    if dest_keep_cols:
+        proximity_cols = proximity_cols + dest_keep_cols
+
     # iterate the closest destination ranking
     for rank_val in closest_df[rank_col].unique():
 
@@ -249,6 +259,7 @@ def _explode_closest_rank_dataframe(closest_df: pd.DataFrame, origin_id_col: str
 
         # iterate the relevant columns
         for col in [dest_id_col] + proximity_cols:
+
             # create a new column name from the unique value and the original row name
             new_name = f'{col}_{rank_val:02d}'
 
@@ -264,9 +275,10 @@ def _explode_closest_rank_dataframe(closest_df: pd.DataFrame, origin_id_col: str
     return origin_dest_df
 
 
-def _get_nearest_local(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame, network_dataset:Path,
-                                single_row_per_origin=True, origin_id_column: str = 'LOCNUM',
-                                destination_id_column: str = 'LOCNUM', destination_count: int = 4) -> pd.DataFrame:
+def _get_nearest_local(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame,
+                       network_dataset: [str, Path], single_row_per_origin=True, origin_id_column: str = 'LOCNUM',
+                       destination_id_column: str = 'LOCNUM', destination_count: int = 4,
+                       dest_cols: list = None) -> pd.DataFrame:
     """Local implementation of get nearest solution."""
     # check to make sure network analyst is available using the env object to make it simplier
     env = utils.Environment()
@@ -277,22 +289,36 @@ def _get_nearest_local(origin_dataframe: pd.DataFrame, destination_dataframe: pd
                         'extension. It appears this extension is either not installed or not licensed.')
 
     # ensure the dataframes are in the right schema and have the right geometry (points)
-    origin_dataframe = _prep_sdf_for_nearest(origin_dataframe, origin_id_column)
-    dest_df = _prep_sdf_for_nearest(destination_dataframe, destination_id_column)
+    origin_net_df = _prep_sdf_for_nearest(origin_dataframe, origin_id_column)
+    dest_net_df = _prep_sdf_for_nearest(destination_dataframe, destination_id_column)
 
     # run the closest analysis locally
-    closest_df = _get_nearest_solve_local(origin_dataframe, dest_df, destination_count, network_dataset)
+    closest_df = _get_nearest_solve_local(origin_net_df, dest_net_df, destination_count, network_dataset)
 
-    # reformat the results to be a single row for each origin if desired
-    out_df = _reformat_closest_result_dataframe(closest_df) if single_row_per_origin else closest_df
+    # reformat and standardize the output
+    std_clstst_df = _reformat_closest_result_dataframe(closest_df)
+
+    if dest_cols:
+        if len(dest_cols):
+            # add the columns onto the near dataframe for output
+            dest_join_df = destination_dataframe[dest_cols].set_index(destination_id_column)
+            std_clstst_df = std_clstst_df.join(dest_join_df, on='destination_id')
+
+    # pivot and explode the results to be a single row for each origin if desired
+    if single_row_per_origin:
+        xplod_dest_cols = [c for c in dest_cols if c != destination_id_column]
+        out_df = _explode_closest_rank_dataframe(std_clstst_df, dest_keep_cols=xplod_dest_cols)
+    else:
+        out_df = std_clstst_df
 
     return out_df
 
 
 def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame,
-                source: [str, Path, Country], single_row_per_origin: bool = True,
+                source: [str, Path, Country, GIS], single_row_per_origin: bool = True,
                 origin_id_column: str = 'LOCNUM', destination_id_column: str = 'LOCNUM',
-                destination_count: int = 4) -> pd.DataFrame:
+                destination_count: int = 4, near_prefix: str = None,
+                destination_columns_to_keep: [str, list] = None) -> pd.DataFrame:
     """
     Create a closest destination dataframe using origin and destination Spatially Enabled
         Dataframes, but keep each origin and destination still in a discrete row instead
@@ -312,6 +338,9 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
             uniquely identifying each feature
         destination_count: Integer number of destinations to search for from every origin
             point.
+        near_prefix: String prefix to prepend onto near column names in the output.
+        destination_columns_to_keep: List of columns to keep in the output. Commonly, if
+            businesses, this includes the column with the business names.
 
     Returns: Spatially Enabled Dataframe with a row for each origin id, and metrics for
         each nth destinations.
@@ -336,34 +365,70 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
                                                                    f'columns ' \
                                                                    f'[{", ".join(destination_dataframe.columns)}]'
 
-    # if the source is path or string, ensure it is a path
-    source = Path(source) if isinstance(source, str) else source
-
-    # if the source is a path, ensure it exists
-    assert source.exists(), f'The path to the network dataset provided does not appear to exist - {str(source)}.'
-
-    # if the source is a country, we are using Business Analyst, so interrogate the source
+    # if the source is a country set to local, we are using Business Analyst, so interrogate the source
     if isinstance(source, Country):
 
-        cntry_src = source.source
+        # if local, get the path to the network dataset
+        if source.source == 'local':
+            source = get_ba_key_value('StreetsNetwork', source.geo_name)
 
-        if cntry_src == 'local':
-
-            # get the path to the network dataset from the registry
-            source = Path(get_ba_key_value('StreetsNetwork', origin_dataframe._cntry.geo_name))
-
-        # save value to source, because is a GIS
+        # if not local, set the source to the GIS object instance
         else:
-            source = cntry_src
+            source = source.source
 
-    # now, the source is either a path to the netowrk source or a GIS object instance, so call each as necessary
-    if isinstance(source, Path):
+    # if the source is a path, convert it to a string because arcpy doesn't do well with path objects
+    source = str(source) if isinstance(source, Path) else source
 
-        out_df = _get_nearest_local(origin_dataframe, destination_dataframe, source, single_row_per_origin,
-                                    origin_id_column, destination_id_column, destination_count)
+    # if a path, ensure it exists
+    if isinstance(source, str):
+        assert arcpy.Exists(source), f'The path to the network dataset provided does not appear to exist - ' \
+                                     f'"{str(source)}".'
+
+    # include any columns to be retained in the output
+    if destination_columns_to_keep is not None:
+
+        # if just a single column is provided in a string, make it into a list
+        if isinstance(destination_columns_to_keep, list):
+            dest_cols = destination_columns_to_keep
+        else:
+            dest_cols = [destination_columns_to_keep]
+
+        # make sure the destination columns include the id columns
+        dest_cols = dest_cols if destination_id_column in dest_cols else [destination_id_column] + dest_cols
+
+        # check all the columns to make sure they are in the output dataframe
+        for col in dest_cols:
+            assert col in destination_dataframe.columns, f'One of the destination_columns_to_keep {col}, does not ' \
+                                                         f'appear to be in the destination_dataframe columns ' \
+                                                         f'[{", ".join(destination_dataframe.columns)}].'
+
+    # if no columns, just populate an empty list so nested functions work
+    else:
+        dest_cols = []
+
+    # now, the source is either a path to the network source or a GIS object instance, so call each as necessary
+    if isinstance(source, str):
+        near_df = _get_nearest_local(origin_dataframe, destination_dataframe, source, single_row_per_origin,
+                                     origin_id_column, destination_id_column, destination_count, dest_cols)
 
     else:
-
         raise Exception('Nearest not yet implemented using GIS object instance.')
+
+    # add prefixes to columns if provided
+    if near_prefix is not None:
+        near_df.columns = [f'{near_prefix}_{c}' for c in near_df.columns]
+        near_oid_col = f'{near_prefix}_origin_id'
+    else:
+        near_oid_col = 'origin_id'
+
+    # add results to input data
+    if single_row_per_origin:
+
+        out_df = origin_dataframe.join(near_df.set_index(near_oid_col), on=origin_id_column)
+    else:
+        out_df = near_df.join(origin_dataframe.drop(columns='SHAPE').set_index(origin_id_column), on=near_oid_col)
+
+    # recognize geometry
+    out_df.spatial.set_geometry('SHAPE')
 
     return out_df

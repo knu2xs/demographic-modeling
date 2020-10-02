@@ -84,3 +84,12 @@ def test_country_enrich_method_local(usa_local):
     cnty_df = usa_local.cbsas.get('seattle').dm.counties.get()
     df = usa_local.enrich(cnty_df, enrich_vars)
     assert isinstance(df, pd.DataFrame) and df.spatial.validate()
+
+
+def test_country_get_nearest_biz_comp(usa_local):
+    aoi_df = usa_local.cbsas.get('portland-vancouver')
+    biz_df = usa_local.business.get_by_name('starbucks', aoi_df).iloc[:2]
+    biz_df.spatial.set_geometry('SHAPE')
+    comp_df = usa_local.business.get_competition(biz_df, aoi_df)
+    near_df = biz_df.dm.get_nearest(comp_df, usa_local)
+    assert isinstance(near_df, pd.DataFrame)
