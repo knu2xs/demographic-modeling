@@ -53,7 +53,7 @@ def test_get_nearest_biz_comp(usa, biz_df, comp_df):
     assert len_biz == len_near and prox_cols
 
 
-def test_get_nearest_biz_comp(usa):
+def test_get_nearest_biz_comp_2(usa):
     aoi_df = usa.cbsas.get('seattle').dm.counties.get('king')
     lvl_df = aoi_df.dm.level(2).get()
     biz_df = usa.business.get_by_name('ace hardware', aoi_df).drop(columns=biz_drop_cols)
@@ -68,3 +68,19 @@ def test_get_nearest_biz_comp(usa):
                                                                                      'brand_name_category'])
 
     assert isinstance(bg_near_biz_comp_df, pd.DataFrame)
+
+
+def test_get_nearest_biz_to_comp(usa):
+    aoi_df = usa.cbsas.get('seattle')
+
+    biz_df = usa.business.get_by_name('ace hardware', aoi_df).drop(columns=biz_drop_cols)
+    biz_df.spatial.set_geometry('SHAPE')
+
+    comp_df = usa.business.get_competition(biz_df, aoi_df, local_threshold=3).drop(columns=biz_drop_cols)
+    comp_df.spatial.set_geometry('SHAPE')
+
+    near_df = biz_df.dm.get_nearest(comp_df, source=usa, destination_count=6, near_prefix='near',
+                                    destination_columns_to_keep=['NAICS', 'brand_name', 'brand_name_category'],
+                                    single_row_per_origin=False)
+
+    assert(near_df, pd.DataFrame)

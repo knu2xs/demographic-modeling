@@ -428,6 +428,8 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
     else:
         out_df = near_df.join(origin_dataframe.drop(columns='SHAPE').set_index(origin_id_column), on=near_oid_col)
 
+        out_df.columns = [c if not c.endswith('_SHAPE') else 'SHAPE' for c in out_df.columns]
+
     # recognize geometry
     out_df.spatial.set_geometry('SHAPE')
 
