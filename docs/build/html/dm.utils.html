@@ -1,0 +1,365 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>dm.utils module &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to Demographic-Modeling-Module’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> demographic-modeling-module
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">dm.utils module</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">demographic-modeling-module</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>dm.utils module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/dm.utils.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-dm.utils">
+<span id="dm-utils-module"></span><h1>dm.utils module<a class="headerlink" href="#module-dm.utils" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="dm.utils.add_enrich_aliases">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">add_enrich_aliases</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">feature_class</span></em>, <em class="sig-param"><span class="n">country_object_instance</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.add_enrich_aliases" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add human readable aliases to an enriched feature class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>feature_class</strong> (<em>(</em><em>&lt;class 'pathlib.Path'&gt;</em><em>, </em><em>&lt;class 'str'&gt;</em><em>)</em>) – Path | str
+Path to the enriched feature class.</p></li>
+<li><p><strong>country_object_instance</strong> – dm.Country
+County object instance for the same country used for initial enrichment.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Returns: Path</dt><dd><p>Path to feature class with aliases added.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.clean_columns">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">clean_columns</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">column_list</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.clean_columns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Little helper to clean up column names quickly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>column_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>) – List of column names.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of cleaned up column names.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.geography_iterable_to_arcpy_geometry_list">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">geography_iterable_to_arcpy_geometry_list</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">geography_iterable</span></em>, <em class="sig-param"><span class="n">geometry_filter</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.geography_iterable_to_arcpy_geometry_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processing helper to convert a iterable of geographies to a list of ArcPy Geometry objects suitable for input
+into ArcGIS ArcPy geoprocessing tools.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geography_iterable</strong> (<em>[</em><em>&lt;class 'pandas.core.frame.DataFrame'&gt;</em><em>, </em><em>&lt;class 'pandas.core.series.Series'&gt;</em><em>, </em><em>&lt;class 'arcgis.geometry._types.Geometry'&gt;</em><em>, </em><em>&lt;class 'list'&gt;</em><em>]</em>) – Iterable containing valid geometries.</p></li>
+<li><p><strong>geometry_filter</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – String point|polyline|polygon to use for validation to ensure correct geometry type.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of ArcPy objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.get_countries">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">get_countries</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">source</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.get_countries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get input_dataframe of countries available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.get_dataframe">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">get_dataframe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">in_features</span></em>, <em class="sig-param"><span class="n">gis</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.get_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a spatially enabled dataframe from the input features provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>in_features</strong> (<em>(</em><em>&lt;class 'pandas.core.frame.DataFrame'&gt;</em><em>, </em><em>&lt;class 'str'&gt;</em><em>, </em><em>&lt;class 'pathlib.Path'&gt;</em><em>, </em><em>&lt;class 'arcgis.features.layer.FeatureLayer'&gt;</em><em>)</em>) – Spatially Enabled Dataframe | String path to Feature Class | pathlib.Path object to feature
+class | ArcGIS Layer object <a href="#id1"><span class="problematic" id="id2">|</span></a>String url to Feature Service | String Web GIS Item ID
+Resource to be evaluated and converted to a Spatially Enabled Dataframe.</p></li>
+<li><p><strong>gis</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">GIS</span></code>]) – Optional GIS object instance for connecting to resources.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Spatially Enabled DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.get_geographic_level_where_clause">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">get_geographic_level_where_clause</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">selector</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">selection_field</span><span class="o">=</span><span class="default_value">'NAME'</span></em>, <em class="sig-param"><span class="n">query_string</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.get_geographic_level_where_clause" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to consolidate where clauses.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.get_geography_preprocessing">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">get_geography_preprocessing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">geo_df</span></em>, <em class="sig-param"><span class="n">geography</span></em>, <em class="sig-param"><span class="n">selector</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">selection_field</span><span class="o">=</span><span class="default_value">'NAME'</span></em>, <em class="sig-param"><span class="n">query_string</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">aoi_geography</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">aoi_selector</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">aoi_selection_field</span><span class="o">=</span><span class="default_value">'NAME'</span></em>, <em class="sig-param"><span class="n">aoi_query_string</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.get_geography_preprocessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function consolidating input parameters for later steps.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.get_lyr_flds_from_geo_df">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">get_lyr_flds_from_geo_df</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df_geo</span></em>, <em class="sig-param"><span class="n">geo</span></em>, <em class="sig-param"><span class="n">query_str</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.get_lyr_flds_from_geo_df" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a local feature layer for a geographic level optionally applying a query to filter results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_geo</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>) – Pandas DataFrame of available local resources.</p></li>
+<li><p><strong>geo</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Name of geographic level.</p></li>
+<li><p><strong>query_str</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Optional query string to filter results.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Tuple containing an Arcpy FeatureLayer with optional query applied as a definition query filtering results,
+and a list with the geographic_level of the ID and NAME fields as a tuple to be included in the output.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.local_vs_gis">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">local_vs_gis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fn</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.local_vs_gis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to facilitate bridging between local and remote resources.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.set_pro_to_usa_local">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">set_pro_to_usa_local</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.set_pro_to_usa_local" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the environment setting to ensure using locally installed local data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Boolean indicating if data correctly enriched.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.set_source">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">set_source</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">in_source</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.set_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to check source input. The source can be set explicitly, but if nothing is provided, it
+assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a GIS object
+instance is available in the current session.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dm.utils.standardize_geographic_level_input">
+<code class="sig-prename descclassname">dm.utils.</code><code class="sig-name descname">standardize_geographic_level_input</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">geo_df</span></em>, <em class="sig-param"><span class="n">geo_in</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.utils.standardize_geographic_level_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to check and standardize inputs.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Demographic-Modeling-Module’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Joel McCune
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
