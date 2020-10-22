@@ -128,8 +128,9 @@ def local_vs_gis(fn):
 
 def set_source(in_source: [str, arcgis.gis.GIS] = None) -> [str, arcgis.gis.GIS]:
     """
-    Helper function to check source input. The source can be set explicitly, but if nothing is provided, it is
-        assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a """
+    Helper function to check source input. The source can be set explicitly, but if nothing is provided, it
+    assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a GIS object
+    instance is available in the current session."""
 
     # if string input is provided, ensure setting to local and lowercase
     if isinstance(in_source, str):
@@ -188,7 +189,9 @@ def get_countries(source=None) -> pd.DataFrame:
 def set_pro_to_usa_local():
     """
     Set the environment setting to ensure using locally installed local data.
-    :return: Boolean indicating if data correctly enriched.
+
+    Return:
+        Boolean indicating if data correctly enriched.
     """
     try:
         arcpy.env.baDataSource = f'LOCAL;;{os.path.basename(get_ba_usa_key_str())}'
@@ -251,12 +254,17 @@ def get_geography_preprocessing(geo_df: pd.DataFrame, geography: [str, int], sel
 def get_lyr_flds_from_geo_df(df_geo: pd.DataFrame, geo: str, query_str: str = None):
     """
     Get a local feature layer for a geographic level optionally applying a query to filter results.
-    Args:
-        df_geo: Pandas DataFrame of available local resources.
-        geo: Name of geographic level.
-        query_str: Optional query string to filter results.
 
-    Returns: Tuple containing an Arcpy FeatureLayer with optional query applied as a definition query filtering results,
+    Args:
+        df_geo:
+            Pandas DataFrame of available local resources.
+        geo:
+            Name of geographic level.
+        query_str:
+            Optional query string to filter results.
+
+    Returns:
+        Tuple containing an Arcpy FeatureLayer with optional query applied as a definition query filtering results,
         and a list with the geographic_level of the ID and NAME fields as a tuple to be included in the output.
     """
     # start by getting the relevant geography_level row from the data
@@ -275,14 +283,18 @@ def get_lyr_flds_from_geo_df(df_geo: pd.DataFrame, geo: str, query_str: str = No
     return lyr, fld_lst
 
 
-def add_enrich_aliases(feature_class: [Path, str], country_object_instance) -> None:
+def add_enrich_aliases(feature_class: (Path, str), country_object_instance) -> Path:
     """
     Add human readable aliases to an enriched feature class.
-    Args:
-        feature_class: Path to the enriched feature class.
-        country_object_instance: County object instance for the same country used for initial enrichment.
 
-    Returns: None
+    Args:
+        feature_class: Path | str
+            Path to the enriched feature class.
+        country_object_instance: dm.Country
+            County object instance for the same country used for initial enrichment.
+
+    Returns: Path
+        Path to feature class with aliases added.
     """
     if not env.arcpy_avail:
         raise Exception('add_enrich_aliases requires arcpy to be available since working with ArcGIS Feature Classes')
@@ -312,16 +324,23 @@ def add_enrich_aliases(feature_class: [Path, str], country_object_instance) -> N
                 new_field_alias=fld_df.iloc[0]['alias']
             )
 
+    return feature_class
+
 
 def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame, pd.Series, arcgis.geometry.Geometry,
                                                                    list], geometry_filter: str = None) -> list:
     """
     Processing helper to convert a iterable of geographies to a list of ArcPy Geometry objects suitable for input
-        into ArcGIS ArcPy geoprocessing tools.
+    into ArcGIS ArcPy geoprocessing tools.
+
     Args:
-        geography_iterable: Iterable containing valid geometries.
-        geometry_filter: String point|polyline|polygon to use for validation to ensure correct geometry type.
-    Returns: List of ArcPy objects.
+        geography_iterable:
+            Iterable containing valid geometries.
+        geometry_filter:
+            String point|polyline|polygon to use for validation to ensure correct geometry type.
+
+    Returns:
+        List of ArcPy objects.
     """
     if not env.arcpy_avail:
         raise Exception('Converting to ArcPy geometry requires an environment with ArcPy available.')
@@ -384,11 +403,16 @@ def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame,
     return arcpy_lst
 
 
-def clean_columns(column_list):
+def clean_columns(column_list: list) -> list:
     """
     Little helper to clean up column names quickly.
-    :param column_list: List of column names.
-    :return: List of cleaned up column names.
+
+    Args:
+        column_list:
+            List of column names.
+
+    Return:
+        List of cleaned up column names.
     """
     def _scrub_col(column):
         no_spc_char = re.sub(r'[^a-zA-Z0-9_\s]', '', column)
@@ -397,13 +421,20 @@ def clean_columns(column_list):
     return [_scrub_col(col) for col in column_list]
 
 
-def get_dataframe(in_features, gis=None):
+def get_dataframe(in_features:(pd.DataFrame, str, Path, FeatureLayer), gis: GIS = None):
     """
     Get a spatially enabled dataframe from the input features provided.
-    :param in_features: Spatially Enabled Dataframe | String path to Feature Class | pathlib.Path object to feature
-        class | ArcGIS Layer object |String url to Feature Service | String Web GIS Item ID
-        Resource to be evaluated and converted to a Spatially Enabled Dataframe.
-    :param gis: Optional GIS object instance for connecting to resources.
+
+    Args:
+        in_features:
+            Spatially Enabled Dataframe | String path to Feature Class | pathlib.Path object to feature
+            class | ArcGIS Layer object |String url to Feature Service | String Web GIS Item ID
+            Resource to be evaluated and converted to a Spatially Enabled Dataframe.
+        gis:
+            Optional GIS object instance for connecting to resources.
+
+    Returns:
+        Spatially Enabled DataFrame
     """
     # if a path object, convert to a string for following steps to work correctly
     in_features = str(in_features) if isinstance(in_features, Path) else in_features

@@ -21,7 +21,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../src/dm'))
+sys.path.insert(0, os.path.abspath('../../src'))
 
 # -- Project information -----------------------------------------------------
 
@@ -185,7 +185,7 @@ html_static_path = ['_static']
 # html_use_opensearch = ''
 
 # This is the file geographic_level suffix for HTML files (e.g. ".xhtml").
-html_file_suffix = '.htm'
+html_file_suffix = '.html'
 
 # Output file base geographic_level for HTML help builder.
 htmlhelp_basename = f'demographic-modeling-module_doc'

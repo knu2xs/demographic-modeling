@@ -29,6 +29,7 @@ dependencies:
     - ipykernel
     - pyarrow
     - sphinx
+    - sphinxcontrib-napoleon
     - sphinx-autodoc-typehints
     - sphinx_rtd_theme
     - twine

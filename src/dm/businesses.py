@@ -72,20 +72,28 @@ class Business(object):
 
     @local_vs_gis
     def get_by_name(self, business_name: str,
-                    area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
+                    area_of_interest: (pd.DataFrame, pd.Series, Geometry, list),
                     name_column: str = 'CONAME', id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
         """
         Search business listings for a specific business name string.
+
         Args:
-            business_name: String business name to search for.
-            area_of_interest: Geometry delineating the area of interest to search for businesses.
-            name_column: Optional - Name of the column with business names to be searched. Default is 'CONAME'
-            id_column: Optional - Name of the column with the value uniquely identifying each business location. Default
+            business_name:
+                String business name to search for.
+            area_of_interest:
+                Geometry delineating the area of interest to search for businesses.
+            name_column:
+                Optional - Name of the column with business names to be searched. Default is 'CONAME'
+            id_column:
+                Optional - Name of the column with the value uniquely identifying each business location. Default
                 is 'LOCNUM'.
-            local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
+            local_threshold:
+                Number of locations to consider, albeit only in the study area, to categorize the each
                 business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
                 in a new column.
-        Returns: Spatially Enabled DataFrame of businesses
+
+        Returns:
+            Spatially Enabled DataFrame of businesses
         """
         pass
 
@@ -95,7 +103,8 @@ class Business(object):
                     local_threshold: int = 0) -> pd.DataFrame:
         """
         Search for businesses based on business category code. In North America, this typically is either the NAICS or
-            SIC code.
+        SIC code.
+
         Args:
             category_code: Business category code, such as 4568843, input as a string. This does not have to be a
                 complete code. The tool will search for the category code with a partial code starting from the
@@ -109,7 +118,9 @@ class Business(object):
             local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
                 business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
                 in a new column.
-        Returns: Spatially Enabled pd.DataFrame
+
+        Returns:
+            Spatially Enabled pd.DataFrame
         """
         pass
 
@@ -120,17 +131,26 @@ class Business(object):
                         id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
         """
         Get competitors from previously retrieved business listings.
+
         Args:
-            brand_businesses: Previously retrieved business listings.
-            area_of_interest: Geographic area to search business listings for competitors.
-            name_column: Optional - Name of the column with business names to be searched. Default is 'CONAME'
-            code_column: Optional - The column in the data to search for business category codes. Default is 'NAICS'
-            id_column: Optional - Name of the column with the value uniquely identifying each business location. Default
+            brand_businesses:
+                Previously retrieved business listings.
+            area_of_interest:
+                Geographic area to search business listings for competitors.
+            name_column:
+                Optional - Name of the column with business names to be searched. Default is 'CONAME'
+            code_column:
+                Optional - The column in the data to search for business category codes. Default is 'NAICS'
+            id_column:
+                Optional - Name of the column with the value uniquely identifying each business location. Default
                 is 'LOCNUM'.
-            local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
+            local_threshold:
+                Number of locations to consider, albeit only in the study area, to categorize the each
                 business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
                 in a new column.
-        Returns: Spatially Enabled DataFrame
+
+        Returns:
+            Spatially Enabled DataFrame
         """
         pass
 

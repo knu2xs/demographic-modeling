@@ -19,13 +19,47 @@ if env.arcpy_avail:
 
 
 class Country:
+    """
+    Country is the foundational object for working with demographic modeling since data
+    is organized based on geopolitical boundaries.
 
-    def __init__(self, name: str, source: [str, arcgis.gis.GIS] = None):
+    .. code-block:: python
+
+        from dm import Country
+
+        usa = Country('USA')
+        aoi_df = usa.cbsas.get('seattle')
+        bg_df = aoi_df.dm.block_groups.get()
+
+        e_vars = usa.enrich_variables
+        key_vars = e_vars[(e_vars.data_collection.str.startswith('Key')) &
+                          (e_vars.name.str.endswith('CY'))]
+
+        e_df = bg_df.dm.enrich(key_vars)
+
+    """
+
+    def __init__(self, name: str, source: (str, arcgis.gis.GIS) = None):
+        """
+        Country objects are instantiated by providing the three letter country identifier
+        and optionally also specifying the source. If the source is not explicitly specified
+        Country will use local resources if the environment is part of an ArcGIS Pro
+        installation with Business Analyst enabled and local data installed. If this is not
+        the case, Country will then attempt to use the active GIS object instance if available.
+        Also, if a GIS object is explicitly passed in, this will be used.
+
+        Args:
+            name:
+                Three letter country identifier.
+            source:
+                Either 'local' or a GIS object instance referencing an ArcGIS Enterprise
+                instance with enrichment configured or ArcGIS Online.
+        """
         self.geo_name = name
         self.source = utils.set_source(source)
         self._enrich_variables = None
         self._geographies = None
-        self.business = Business(self)
+        self._business = None
 
         # add on all the geographic resolution levels as properties
         for nm in self.geographies.geo_name:
@@ -40,6 +74,18 @@ class Country:
         geo_ref = cntry_df[cntry_df['country'] == self.geo_name]['geo_ref'].iloc[0]
         arcpy.env.baDataSource = f'LOCAL;;{geo_ref}'
         return
+
+    @property
+    def business(self):
+        """
+        Access to business object instance for the country.
+
+        Returns:
+            dm.Business object instance.
+        """
+        if self._business is None:
+            self._business = Business(self)
+        return self._business
 
     @property
     def enrich_variables(self):
@@ -64,22 +110,24 @@ class Country:
         return self._geographies
 
     @local_vs_gis
-    def level(self, geography_index: [str, int]) -> pd.DataFrame:
+    def level(self, geography_index: (str, int)) -> pd.DataFrame:
         """
         Get a GeographyLevel at an available geography_level level in the
-            country.
+        country.
 
         Args:
-            geography_index: Either the geographic_level geo_name or the
+            geography_index:
+                Either the geographic_level geo_name or the
                 index of the geography_level level. This can be discovered
-                using the Country.geographies method.
+                using the ``Country.geographies`` method.
 
-        Returns: pd.DataFrame as Geography object instance with the
-            requested geographies.
+        Returns:
+            Spatially Enabled DataFrame of the requested geographies with
+            the DemographicModeling accessor properties initialized.
         """
         pass
 
-    def _level_local(self, geography_index: [str, int]) -> pd.DataFrame:
+    def _level_local(self, geography_index: (str, int)) -> pd.DataFrame:
         """Local implementation of level."""
         # get the geo_name of the geography
         if isinstance(geography_index, int):
@@ -93,27 +141,31 @@ class Country:
         return GeographyLevel(nm, self)
 
     @local_vs_gis
-    def enrich(self, data, enrich_variables: [list, np.array, pd.Series] = None,
-               data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+    def enrich(self, data: pd.DataFrame, enrich_variables: (list, np.array, pd.Series) = None,
+               data_collections: (str, list, np.array, pd.Series) = None) -> pd.DataFrame:
         """
         Enrich a spatially enabled dataframe using either a list of enrichment
-            variables, or data collections. Either enrich_variables or
-            data_collections must be provided, but not both.
+        variables, or data collections. Either ``enrich_variables`` or
+        ``data_collections`` must be provided, but not both.
 
         Args:
-            data: Spatially Enabled DataFrame with geographies to be
+            data:
+                Spatially Enabled DataFrame with geographies to be
                 enriched.
-            enrich_variables: Optional iterable of enrich variables to use for
+            enrich_variables:
+                Optional iterable of enrich variables to use for
                 enriching data.
-            data_collections: Optional iterable of data collections to use for
+            data_collections:
+                Optional iterable of data collections to use for
                 enriching data.
 
-        Returns: Spatially Enabled DataFrame with enriched data now added.
+        Returns:
+            Spatially Enabled DataFrame with enriched data now added.
         """
         pass
 
-    def _enrich_local(self, data, enrich_variables: [list, np.array, pd.Series] = None,
-                      data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+    def _enrich_local(self, data, enrich_variables: (list, np.array, pd.Series) = None,
+                      data_collections: (str, list, np.array, pd.Series) = None) -> pd.DataFrame:
         """Implementation of enrich for local analysis."""
         # ensure only using enrich_variables or data collections
         if enrich_variables is None and data_collections is None:
@@ -183,7 +235,7 @@ class Country:
 
 class GeographyLevel:
 
-    def __init__(self, geographic_level: [str, int], country: Country, parent_data: [pd.DataFrame, pd.Series] = None):
+    def __init__(self, geographic_level: (str, int), country: Country, parent_data: (pd.DataFrame, pd.Series) = None):
         self._cntry = country
         self.source = country.source
         self.geo_name = self._standardize_geographic_level_input(geographic_level)
@@ -193,7 +245,7 @@ class GeographyLevel:
     def __repr__(self):
         return f'<class: GeographyLevel - {self.geo_name}>'
 
-    def _standardize_geographic_level_input(self, geo_in: [str, int]) -> str:
+    def _standardize_geographic_level_input(self, geo_in: (str, int)) -> str:
         """Helper function to check and standardize named input."""
 
         geo_df = self._cntry.geographies
@@ -229,38 +281,43 @@ class GeographyLevel:
         return self._resource
 
     @local_vs_gis
-    def get(self, geography: [str, int], selector: str = None, selection_field: str = 'NAME',
+    def get(self, geography: (str, int), selector: str = None, selection_field: str = 'NAME',
             query_string: str = None) -> pd.DataFrame:
         """
         Get a DataFrame at an available geography_level level. Since frequently
-            working within an area of interest defined by a higher level of
-            geography_level, typically a CBSA or DMA, the ability to specify this
-            area using input parameters is also included. This dramatically speeds
-            up the process of creating the output.
+        working within an area of interest defined by a higher level of
+        geography_level, typically a CBSA or DMA, the ability to specify this
+        area using input parameters is also included. This dramatically speeds
+        up the process of creating the output.
 
         Args:
-            geography: Either the geographic_level or the index of the geography_level
+            geography:
+                Either the geographic_level or the index of the geography_level
                 level. This can be discovered using the Country.geographies method.
-            selector: If a specific value can be identified using a string, even if
+            selector:
+                If a specific value can be identified using a string, even if
                 just part of the field value, you can insert it here.
-            selection_field: This is the field to be searched for the string values
+            selection_field:
+                This is the field to be searched for the string values
                 input into selector.
-            query_string: If a more custom query is desired to filter the output, please
+            query_string:
+                If a more custom query is desired to filter the output, please
                 use SQL here to specify the query. The normal query is "UPPER(NAME) LIKE
                 UPPER('%<selector>%')". However, if a more specific query is needed, this
                 can be used as the starting point to get more specific.
 
-        Returns: pd.DataFrame as Geography object instance with the requested geographies.
+        Returns:
+            pd.DataFrame as Geography object instance with the requested geographies.
         """
         pass
 
-    def _get_local(self, selector: [str, list] = None, selection_field: str = 'NAME',
+    def _get_local(self, selector: (str, list) = None, selection_field: str = 'NAME',
                    query_string: str = None) -> pd.DataFrame:
 
         return self._get_local_df(selector, selection_field, query_string, self._parent_data)
 
     @local_vs_gis
-    def within(self, selecting_geography: [pd.DataFrame, Geometry, list]) -> pd.DataFrame:
+    def within(self, selecting_geography: (pd.DataFrame, Geometry, list)) -> pd.DataFrame:
         """
         Get a input_dataframe at an available geography_level level falling within a defined selecting geography.
 
@@ -272,11 +329,11 @@ class GeographyLevel:
         """
         pass
 
-    def _within_local(self, selecting_geography: [pd.DataFrame, Geometry, list]) -> pd.DataFrame:
+    def _within_local(self, selecting_geography: (pd.DataFrame, Geometry, list)) -> pd.DataFrame:
         """Local implementation of within."""
         return self._get_local_df(selecting_geography=selecting_geography)
 
-    def _get_sql_helper(self, selector: [str, list] = None, selection_field: str = 'NAME',
+    def _get_sql_helper(self, selector: (str, list) = None, selection_field: str = 'NAME',
                         query_string: str = None):
         """Helper to handle creation of sql queries for get functions."""
         if query_string:
@@ -291,9 +348,9 @@ class GeographyLevel:
 
         return sql
 
-    def _get_local_df(self, selector: [str, list] = None, selection_field: str = 'NAME',
+    def _get_local_df(self, selector: (str, list) = None, selection_field: str = 'NAME',
                       query_string: str = None,
-                      selecting_geography: [pd.DataFrame, pd.Series, Geometry, list] = None) -> pd.DataFrame:
+                      selecting_geography: (pd.DataFrame, pd.Series, Geometry, list) = None) -> pd.DataFrame:
         """Single function handling business logic for both _get_local and _within_local."""
         # set up the where clause based on input enabling overriding using a custom query if desired
         sql = self._get_sql_helper(selector, selection_field, query_string)
@@ -341,7 +398,7 @@ class GeographyLevel:
         return out_data
 
     @local_vs_gis
-    def get_names(self, selector: [str, list] = None, selection_field: str = 'NAME',
+    def get_names(self, selector: (str, list) = None, selection_field: str = 'NAME',
                   query_string: str = None) -> pd.Series:
         """
         Get a Pandas Series of available names based on a test input. This runs the
@@ -363,7 +420,7 @@ class GeographyLevel:
         """
         pass
 
-    def _get_names_local(self, selector: [str, list] = None, selection_field: str = 'NAME',
+    def _get_names_local(self, selector: (str, list) = None, selection_field: str = 'NAME',
                          query_string: str = None) -> pd.Series:
         """Local implementation of 'get_names'."""
         # create or use the input query parameters
@@ -378,8 +435,17 @@ class GeographyLevel:
 
 @register_dataframe_accessor('dm')
 class DemographicModeling:
+    """
+    DemograpphicModeling is a Pandas DataFrame accessor, a standalone namespace for
+    accessing demographic modeling functionality. If the DataFrame was created using
+    a Country object, then the DemographicModeling (``dm``) namespace will automatically
+    be available. However, if you want to use this functionality, and have not created
+    the DataFrame using the Country object, you must import DemographicModeling, and
+    then you will have this functionality available.
+    """
 
     def __init__(self, obj):
+        """Rarely called, as this happens automatically when invoking."""
         self._data = obj
         self._index = obj.index
 
@@ -400,13 +466,13 @@ class DemographicModeling:
 
     def level(self, geographic_level: int) -> GeographyLevel:
         """
-        Retrieve the GeographyLevel object corresponding to the index returned
-            by the Country.geographies property. This is most useful when
-            retrieving the lowest, most granular, level of geography within a
-            country.
+        Retrieve a Spatially Enabled DataFrame of geometries corresponding
+        to the index returned by the Country.geographies property. This is
+        most useful when retrieving the lowest, most granular, level of
+        geography within a country.
 
         .. code-block:: python
-            :linenos:
+
             from dm import Country
 
             # create an instance of the country object
@@ -420,9 +486,11 @@ class DemographicModeling:
             lvl_df = metro_df.dm.level(0).get()
 
         Args:
-            geographic_level: Integer referencing the index of the geographic level desired.
+            geographic_level:
+                Integer referencing the index of the geographic level desired.
 
-        Returns: GeographyLevel object instance
+        Returns:
+            GeographyLevel object instance
         """
         assert self._cntry is not None, "The 'dm.level' method requires the parent dataframe be created by the" \
                                         "Country object."
@@ -439,18 +507,21 @@ class DemographicModeling:
 
         return geo_lvl
 
-    def enrich(self, enrich_variables: [list, np.array, pd.Series] = None,
-               data_collections: [str, list, np.array, pd.Series] = None) -> pd.DataFrame:
+    def enrich(self, enrich_variables: (list, np.array, pd.Series) = None,
+               data_collections: (str, list, np.array, pd.Series) = None) -> pd.DataFrame:
         """
         Enrich the DataFrame using the provided enrich variable list or data
-            collections list. Either a variable list or list of data
-            collections can be provided, but not both.
+        collections list. Either a variable list or list of data
+        collections can be provided, but not both.
 
         Args:
-            enrich_variables: List of data variables for enrichment.
-            data_collections: List of data collections for enrichment.
+            enrich_variables:
+                List of data variables for enrichment.
+            data_collections:
+                List of data collections for enrichment.
 
-        Returns: pd.DataFrame with enriched data.
+        Returns:
+            pd.DataFrame with enriched data.
         """
         assert self._cntry is not None, "The 'dm.enrich' method requires the parent dataframe be created by the" \
                                         "Country object."
@@ -463,14 +534,16 @@ class DemographicModeling:
 
         return out_df
 
-    def project(self, output_spatial_reference: [SpatialReference, int] = 4326):
+    def project(self, output_spatial_reference: (SpatialReference, int) = 4326):
         """
         Project to a new spatial reference, applying an applicable transformation if necessary.
 
         Args:
-            output_spatial_reference: Optional - The output spatial reference. Default is 4326 (WGS84).
+            output_spatial_reference:
+                Optional - The output spatial reference. Default is 4326 (WGS84).
 
-        Returns: Spatially Enabled DataFrame projected to the new spatial reference.
+        Returns:
+            Spatially Enabled DataFrame projected to the new spatial reference.
         """
         # import needed resources
         from .spatial import project_as
@@ -478,37 +551,46 @@ class DemographicModeling:
         # perform the projection
         return project_as(self._data, output_spatial_reference)
 
-    def get_nearest(self, destination_dataframe: pd.DataFrame, source: [str, Path, Country, arcgis.gis.GIS] = None,
+    def get_nearest(self, destination_dataframe: pd.DataFrame, source: (str, Path, Country, arcgis.gis.GIS) = None,
                     single_row_per_origin: bool = True, origin_id_column: str = 'LOCNUM',
                     destination_id_column: str = 'LOCNUM', destination_count: int = 4, near_prefix: str = None,
-                    destination_columns_to_keep: [str, list] = None) -> pd.DataFrame:
+                    destination_columns_to_keep: (str, list) = None) -> pd.DataFrame:
         """
         Create a closest destination dataframe using a destination Spatially Enabled
-            Dataframe relative to the parent Spatially enabled DataFrame, but keep each
-            origin and destination still in a discrete row instead of collapsing to a
-            single row per origin. The main reason to use this is if needing the geometry
-            for visualization.
+        Dataframe relative to the parent Spatially enabled DataFrame, but keep each
+        origin and destination still in a discrete row instead of collapsing to a
+        single row per origin. The main reason to use this is if needing the geometry
+        for visualization.
 
         Args:
-            destination_dataframe: Destination points in one of the supported input formats.
-            source: Optional - Either the path to the network dataset, the Country object
+            destination_dataframe:
+                Destination points in one of the supported input formats.
+            source:
+                Optional - Either the path to the network dataset, the Country object
                 associated with the Business Analyst source being used, or a GIS object
                 instance. If invoked from a dataframe created for a country's standard
                 geography levels using the dm accessor, get_nearest will use the parent
                 country properties to ascertain how to perform the networks solve.
-            single_row_per_origin: Optional - Whether or not to pivot the results to return
+            single_row_per_origin:
+                Optional - Whether or not to pivot the results to return
                 only one row for each origin location. Default is True.
-            origin_id_column: Optional - Column in the origin points Spatially Enabled Dataframe
+            origin_id_column:
+                Optional - Column in the origin points Spatially Enabled Dataframe
                 uniquely identifying each feature. Default is 'LOCNUM'.
-            destination_id_column: Column in the destination points Spatially Enabled Dataframe
+            destination_id_column:
+                Column in the destination points Spatially Enabled Dataframe
                 uniquely identifying each feature
-            destination_count: Integer number of destinations to search for from every origin
+            destination_count:
+                Integer number of destinations to search for from every origin
                 point.
-            near_prefix: String prefix to prepend onto near column names in the output.
-            destination_columns_to_keep: List of columns to keep in the output. Commonly, if
+            near_prefix:
+                String prefix to prepend onto near column names in the output.
+            destination_columns_to_keep:
+                List of columns to keep in the output. Commonly, if
                 businesses, this includes the column with the business names.
 
-        Returns: Spatially Enabled Dataframe with a row for each origin id, and metrics for
+        Returns:
+            Spatially Enabled Dataframe with a row for each origin id, and metrics for
             each nth destinations.
         """
         # retrieve resources needed
