@@ -15,6 +15,7 @@ from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_
 
 if env.arcpy_avail:
     import arcpy
+
     arcpy.env.overwriteOutput = True
 
 
