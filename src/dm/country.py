@@ -20,41 +20,46 @@ if env.arcpy_avail:
 
 class Country:
     """
-    Country is the foundational object for working with demographic modeling since data
-    is organized based on geopolitical boundaries.
+    Country objects are instantiated by providing the three letter country identifier
+    and optionally also specifying the source. If the source is not explicitly specified
+    Country will use local resources if the environment is part of an ArcGIS Pro
+    installation with Business Analyst enabled and local data installed. If this is not
+    the case, Country will then attempt to use the active GIS object instance if available.
+    Also, if a GIS object is explicitly passed in, this will be used.
+
+    Args:
+        name:
+            Three letter country identifier.
+        source:
+            Either 'local' or a GIS object instance referencing an ArcGIS Enterprise
+            instance with enrichment configured or ArcGIS Online.
 
     .. code-block:: python
 
         from dm import Country
 
-        usa = Country('USA')
+        # instantiate a
+        usa = Country('USA', source='local')
+
+        # get the seattle CBSA as a study area
         aoi_df = usa.cbsas.get('seattle')
+
+        # use the DemographicAnalysis DataFrame accessor to retrieve geographies
         bg_df = aoi_df.dm.block_groups.get()
 
+        # get the available enrich variables as as DataFrame
         e_vars = usa.enrich_variables
+
+        # filter the variables to just the current year key variables
         key_vars = e_vars[(e_vars.data_collection.str.startswith('Key')) &
                           (e_vars.name.str.endswith('CY'))]
 
+        # enrich the data through the DemographicModeling DataFrame accessor
         e_df = bg_df.dm.enrich(key_vars)
 
     """
 
     def __init__(self, name: str, source: (str, arcgis.gis.GIS) = None):
-        """
-        Country objects are instantiated by providing the three letter country identifier
-        and optionally also specifying the source. If the source is not explicitly specified
-        Country will use local resources if the environment is part of an ArcGIS Pro
-        installation with Business Analyst enabled and local data installed. If this is not
-        the case, Country will then attempt to use the active GIS object instance if available.
-        Also, if a GIS object is explicitly passed in, this will be used.
-
-        Args:
-            name:
-                Three letter country identifier.
-            source:
-                Either 'local' or a GIS object instance referencing an ArcGIS Enterprise
-                instance with enrichment configured or ArcGIS Online.
-        """
         self.geo_name = name
         self.source = utils.set_source(source)
         self._enrich_variables = None
@@ -95,6 +100,9 @@ class Country:
 
         elif self._enrich_variables is None and isinstance(self.source, arcgis.gis.GIS):
             raise Exception('Using a GIS instance is not yet implemented.')
+
+        # add on the country for subsequent analysis
+        self._enrich_variables.attrs['_cntry'] = self
 
         return self._enrich_variables
 
@@ -141,7 +149,7 @@ class Country:
         return GeographyLevel(nm, self)
 
     @local_vs_gis
-    def enrich(self, data: pd.DataFrame, enrich_variables: (list, np.array, pd.Series) = None,
+    def enrich(self, data: pd.DataFrame, enrich_variables: (list, np.array, pd.Series, pd.DataFrame) = None,
                data_collections: (str, list, np.array, pd.Series) = None) -> pd.DataFrame:
         """
         Enrich a spatially enabled dataframe using either a list of enrichment
@@ -154,7 +162,8 @@ class Country:
                 enriched.
             enrich_variables:
                 Optional iterable of enrich variables to use for
-                enriching data.
+                enriching data. A filtered output from
+                Country.enrich_variables can also be used.
             data_collections:
                 Optional iterable of data collections to use for
                 enriching data.
@@ -164,7 +173,7 @@ class Country:
         """
         pass
 
-    def _enrich_local(self, data, enrich_variables: (list, np.array, pd.Series) = None,
+    def _enrich_local(self, data, enrich_variables: (list, np.array, pd.Series, pd.DataFrame) = None,
                       data_collections: (str, list, np.array, pd.Series) = None) -> pd.DataFrame:
         """Implementation of enrich for local analysis."""
         # ensure only using enrich_variables or data collections
@@ -192,6 +201,10 @@ class Country:
         if len(missing_vars):
             raise Exception('Some of the variables you provided are not available for enrichment '
                             f'[{", ".join(missing_vars)}]')
+
+        # check to make sure there are variables for enrichment
+        if len(enrich_variables) == 0:
+            raise Exception('There appear to be no variables being selected for enrichment.')
 
         # combine all the enrichment variables into a single string for input into the enrich tool
         enrich_str = ';'.join(enrich_variables)
@@ -229,6 +242,9 @@ class Country:
 
         # ensure WGS84
         out_data = out_df.dm.project(4326)
+
+        # add the country onto the metadata
+        out_data.attrs['_cntry'] = self
 
         return out_data
 
@@ -319,7 +335,8 @@ class GeographyLevel:
     @local_vs_gis
     def within(self, selecting_geography: (pd.DataFrame, Geometry, list)) -> pd.DataFrame:
         """
-        Get a input_dataframe at an available geography_level level falling within a defined selecting geography.
+        Get a input_dataframe at an available geography_level level falling within
+        a defined selecting geography.
 
         Args:
             selecting_geography: Either a Spatially Enabled DataFrame, arcgis.Geometry object instance, or list of
@@ -392,8 +409,8 @@ class GeographyLevel:
         out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst).dm.project(4326)
 
         # tack on the country and geographic level name for potential use later
-        setattr(out_data, '_cntry', self._cntry)
-        setattr(out_data, 'geo_name', self.geo_name)
+        out_data.attrs['_cntry'] = self._cntry
+        out_data.attrs['geo_name'] = self.geo_name
 
         return out_data
 
@@ -445,18 +462,22 @@ class DemographicModeling:
     """
 
     def __init__(self, obj):
-        """Rarely called, as this happens automatically when invoking."""
         self._data = obj
         self._index = obj.index
 
         # save the country if it is passed from the invoking parent
-        self._cntry = obj._cntry if hasattr(obj, '_cntry') else None
+        if '_cntry' in obj.attrs.keys():
+            self._cntry = obj.attrs['_cntry']
+        elif hasattr(obj, '_cntry'):
+            self._cntry = obj._cntry
+        else:
+            self._cntry = None
 
         # if geo_name is a property of the dataframe, is the output of a chained function, and we can add capability
-        if hasattr(obj, 'geo_name'):
+        if 'geo_name' in obj.attrs.keys():
 
             # get the geographic level index
-            self._geo_idx = self._cntry.geographies[self._cntry.geographies['geo_name'] == self._data.geo_name].index[0]
+            self._geo_idx = self._cntry.geographies[self._cntry.geographies['geo_name'] == self._data.attrs['geo_name']].index[0]
 
             # add all the geographic levels below the current geographic level as properties
             for idx in self._cntry.geographies.index:
@@ -470,6 +491,13 @@ class DemographicModeling:
         to the index returned by the Country.geographies property. This is
         most useful when retrieving the lowest, most granular, level of
         geography within a country.
+
+        Args:
+            geographic_level:
+                Integer referencing the index of the geographic level desired.
+
+        Returns:
+            GeographyLevel object instance
 
         .. code-block:: python
 
@@ -485,12 +513,6 @@ class DemographicModeling:
             # falling within the parent dataframe
             lvl_df = metro_df.dm.level(0).get()
 
-        Args:
-            geographic_level:
-                Integer referencing the index of the geographic level desired.
-
-        Returns:
-            GeographyLevel object instance
         """
         assert self._cntry is not None, "The 'dm.level' method requires the parent dataframe be created by the" \
                                         "Country object."
@@ -507,8 +529,8 @@ class DemographicModeling:
 
         return geo_lvl
 
-    def enrich(self, enrich_variables: (list, np.array, pd.Series) = None,
-               data_collections: (str, list, np.array, pd.Series) = None) -> pd.DataFrame:
+    def enrich(self, enrich_variables: (list, np.array, pd.Series, pd.DataFrame) = None,
+               data_collections: (str, list, np.array, pd.Series) = None, country: Country = None) -> pd.DataFrame:
         """
         Enrich the DataFrame using the provided enrich variable list or data
         collections list. Either a variable list or list of data
@@ -516,21 +538,77 @@ class DemographicModeling:
 
         Args:
             enrich_variables:
-                List of data variables for enrichment.
+                List of data variables for enrichment. This can optionally
+                be a filtered subset of the dataframe property of an instance
+                of the Country object.
             data_collections:
                 List of data collections for enrichment.
+            country: Optional
+                Country object instance. This must be included if the parent
+                dataframe was not created using this package's standard
+                geography methods, or if the enrichment variables are not
+                defined by passing in an enrich variables dataframe created
+                using this package's introspection methods.
 
         Returns:
             pd.DataFrame with enriched data.
+
+        .. code-block:: python
+
+            from pathlib import Path
+
+            from arcgis import GeoAccessor
+            from dm import Country, DemographicModeling
+            import pandas as pd
+
+            # get a path to the trade area data
+            prj_pth = Path(__file__).parent
+            gdb_pth = dir_data/'data.gdb'
+            fc_pth = gdb/'trade_areas'
+
+            # load the trade areas into a Spatially Enabled DataFrame
+            ta_df = pd.DataFrame.spatial.from_featureclass(fc_pth)
+
+            # create a country object instance
+            usa = Country('USA', source='local')
+
+            # get all the available enrichment variables
+            e_vars = usa.enrich_variables
+
+            # filter to just the current year key variables
+            key_vars = e_vars[(e_vars.data_collection.str.startswith('Key')) &
+                              (e_vars.name.str.endswith('CY'))]
+
+            # enrich the Spatially Enabled DataFrame
+            tae_df = ta_df.dm.enrich(key_vars)
+
         """
-        assert self._cntry is not None, "The 'dm.enrich' method requires the parent dataframe be created by the" \
-                                        "Country object."
+        # prioirtize the country parameter
+        if country is not None:
+            cntry = country
+
+        # next, if the enrich variables has the country defined
+        elif '_cntry' in enrich_variables.attrs.keys():
+            cntry = enrich_variables.attrs['_cntry']
+
+        # now, see if the parent dataframe has a country property
+        elif hasattr(self, '_cntry'):
+            cntry = self._cntry
+
+        # otherwise, we don't know what to do
+        else:
+            cntry = None
+
+        assert isinstance(cntry, Country), "The 'dm.enrich' method requires the parent dataframe be created by the " \
+                                           "Country object, the enrich variables to be provided as a dataframe " \
+                                           "retrieved from a Country object, or a valid Country object must be " \
+                                           "explicitly provided as input into the country parameter."
 
         # get the data from the GeoAccessor _data property
         data = self._data
 
         # invoke the enrich method from the country
-        out_df = self._cntry.enrich(data, enrich_variables, data_collections)
+        out_df = cntry.enrich(data, enrich_variables, data_collections)
 
         return out_df
 

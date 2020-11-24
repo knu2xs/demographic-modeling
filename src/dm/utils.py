@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import re
 
-import arcgis.env
+from arcgis.env import active_gis
 from arcgis.gis import GIS
 from arcgis.features import FeatureSet, FeatureLayer, GeoAccessor
 from arcgis.geometry import Geometry
@@ -111,7 +111,7 @@ def local_vs_gis(fn):
                 raise AttributeError(f"'{fn_name}' not available using 'local' as the source.")
 
         # now, if performing analysis using a Web GIS, then access the function referencing remote resources
-        elif isinstance(self.source, arcgis.gis.GIS):
+        elif isinstance(self.source, GIS):
             try:
                 fn_to_call = getattr(self, f'_{fn_name}_gis')
             except AttributeError:
@@ -126,7 +126,7 @@ def local_vs_gis(fn):
     return wrapped
 
 
-def set_source(in_source: [str, arcgis.gis.GIS] = None) -> [str, arcgis.gis.GIS]:
+def set_source(in_source: [str, GIS] = None) -> [str, GIS]:
     """
     Helper function to check source input. The source can be set explicitly, but if nothing is provided, it
     assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a GIS object
@@ -149,11 +149,11 @@ def set_source(in_source: [str, arcgis.gis.GIS] = None) -> [str, arcgis.gis.GIS]
         source = 'local'
 
     # TODO: add check if web gis routing and enrich active - error if not available
-    elif in_source is None and arcgis.env.active_gis:
-        source = arcgis.env.active_gis
+    elif in_source is None and active_gis:
+        source = active_gis
 
     # if not using local, use a GIS
-    elif isinstance(in_source, arcgis.gis.GIS):
+    elif isinstance(in_source, GIS):
         source = in_source
 
     return source
@@ -167,6 +167,7 @@ def get_countries(source=None) -> pd.DataFrame:
     src = set_source(source)
 
     if src is 'local':
+
         keys = get_child_key_strs(r'SOFTWARE\WOW6432Node\Esri\BusinessAnalyst\Datasets')
 
         def _get_dataset_info(key):
@@ -327,7 +328,7 @@ def add_enrich_aliases(feature_class: (Path, str), country_object_instance) -> P
     return feature_class
 
 
-def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame, pd.Series, arcgis.geometry.Geometry,
+def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame, pd.Series, Geometry,
                                                                    list], geometry_filter: str = None) -> list:
     """
     Processing helper to convert a iterable of geographies to a list of ArcPy Geometry objects suitable for input
@@ -377,13 +378,13 @@ def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame,
     # if a list, ensure all child objects are polygon geometries and convert to list of arcpy.Geometry objects
     elif isinstance(geography_iterable, list):
         for geom in geography_iterable:
-            if not isinstance(geom, arcgis.geometry.Geometry):
+            if not isinstance(geom, Geometry):
                 raise Exception('The provided geometries in the selecting_geometry list do not appear to all be '
                                 'valid.')
         geom_lst = geography_iterable
 
     # if a single geometry object instance, ensure is polygon and make into single item list of arcpy.Geometry
-    elif isinstance(geography_iterable, arcgis.geometry.Geometry):
+    elif isinstance(geography_iterable, Geometry):
         geom_lst = [geography_iterable]
 
     else:
