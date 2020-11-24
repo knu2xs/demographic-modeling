@@ -160,24 +160,6 @@
 <dl class="py class">
 <dt id="dm.Country">
 <em class="property">class </em><code class="sig-prename descclassname">dm.</code><code class="sig-name descname">Country</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">source</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.Country" title="Permalink to this definition">¶</a></dt>
-<dd><p>Country is the foundational object for working with demographic modeling since data
-is organized based on geopolitical boundaries.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
-
-<span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
-<span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
-<span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-
-<span class="n">e_vars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
-<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span> <span class="o">&amp;</span>
-                  <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
-
-<span class="n">e_df</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="py method">
-<dt id="dm.Country.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">source</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.Country.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Country objects are instantiated by providing the three letter country identifier
 and optionally also specifying the source. If the source is not explicitly specified
 Country will use local resources if the environment is part of an ArcGIS Pro
@@ -193,8 +175,28 @@ instance with enrichment configured or ArcGIS Online.</p></li>
 </ul>
 </dd>
 </dl>
-</dd></dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
 
+<span class="c1"># instantiate a</span>
+<span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">)</span>
+
+<span class="c1"># get the seattle CBSA as a study area</span>
+<span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
+
+<span class="c1"># use the DemographicAnalysis DataFrame accessor to retrieve geographies</span>
+<span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+<span class="c1"># get the available enrich variables as as DataFrame</span>
+<span class="n">e_vars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
+
+<span class="c1"># filter the variables to just the current year key variables</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span> <span class="o">&amp;</span>
+                  <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
+
+<span class="c1"># enrich the data through the DemographicModeling DataFrame accessor</span>
+<span class="n">e_df</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+</pre></div>
+</div>
 <dl class="py method">
 <dt id="dm.Country.business">
 <em class="property">property </em><code class="sig-name descname">business</code><a class="headerlink" href="#dm.Country.business" title="Permalink to this definition">¶</a></dt>
@@ -218,7 +220,8 @@ variables, or data collections. Either <code class="docutils literal notranslate
 <li><p><strong>data</strong> – Spatially Enabled DataFrame with geographies to be
 enriched.</p></li>
 <li><p><strong>enrich_variables</strong> – Optional iterable of enrich variables to use for
-enriching data.</p></li>
+enriching data. A filtered output from
+Country.enrich_variables can also be used.</p></li>
 <li><p><strong>data_collections</strong> – Optional iterable of data collections to use for
 enriching data.</p></li>
 </ul>
@@ -274,12 +277,6 @@ be available. However, if you want to use this functionality, and have not creat
 the DataFrame using the Country object, you must import DemographicModeling, and
 then you will have this functionality available.</p>
 <dl class="py method">
-<dt id="dm.DemographicModeling.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.DemographicModeling.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Rarely called, as this happens automatically when invoking.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt id="dm.DemographicModeling.enrich">
 <code class="sig-name descname">enrich</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">enrich_variables</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">data_collections</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.DemographicModeling.enrich" title="Permalink to this definition">¶</a></dt>
 <dd><p>Enrich the DataFrame using the provided enrich variable list or data
@@ -288,7 +285,9 @@ collections can be provided, but not both.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>enrich_variables</strong> – List of data variables for enrichment.</p></li>
+<li><p><strong>enrich_variables</strong> – List of data variables for enrichment. This can optionally
+be a filtered subset of the dataframe property of an instance
+of the Country object.</p></li>
 <li><p><strong>data_collections</strong> – List of data collections for enrichment.</p></li>
 </ul>
 </dd>
@@ -296,6 +295,34 @@ collections can be provided, but not both.</p>
 <dd class="field-even"><p>pd.DataFrame with enriched data.</p>
 </dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span> <span class="nn">arcgis</span> <span class="kn">import</span> <span class="n">GeoAccessor</span>
+<span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span><span class="p">,</span> <span class="n">DemographicModeling</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="c1"># get a path to the trade area data</span>
+<span class="n">prj_pth</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
+<span class="n">gdb_pth</span> <span class="o">=</span> <span class="n">dir_data</span><span class="o">/</span><span class="s1">&#39;data.gdb&#39;</span>
+<span class="n">fc_pth</span> <span class="o">=</span> <span class="n">gdb</span><span class="o">/</span><span class="s1">&#39;trade_areas&#39;</span>
+
+<span class="c1"># load the trade areas into a Spatially Enabled DataFrame</span>
+<span class="n">ta_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">from_featureclass</span><span class="p">(</span><span class="n">fc_pth</span><span class="p">)</span>
+
+<span class="c1"># create a country object instance</span>
+<span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">)</span>
+
+<span class="c1"># get all the available enrichment variables</span>
+<span class="n">e_vars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
+
+<span class="c1"># filter to just the current year key variables</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span> <span class="o">&amp;</span>
+                  <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
+
+<span class="c1"># enrich the Spatially Enabled DataFrame</span>
+<span class="n">tae_df</span> <span class="o">=</span> <span class="n">ta_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -342,6 +369,17 @@ each nth destinations.</p>
 to the index returned by the Country.geographies property. This is
 most useful when retrieving the lowest, most granular, level of
 geography within a country.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>geographic_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Integer referencing the index of the geographic level desired.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">GeographyLevel</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>GeographyLevel object instance</p>
+</dd>
+</dl>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># create an instance of the country object</span>
@@ -355,17 +393,6 @@ geography within a country.</p>
 <span class="n">lvl_df</span> <span class="o">=</span> <span class="n">metro_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">level</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 </pre></div>
 </div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>geographic_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Integer referencing the index of the geographic level desired.</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">GeographyLevel</span></code></p>
-</dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>GeographyLevel object instance</p>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -388,12 +415,6 @@ geography within a country.</p>
 <dt id="dm.Business">
 <em class="property">class </em><code class="sig-prename descclassname">dm.</code><code class="sig-name descname">Business</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">country</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.Business" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="py method">
-<dt id="dm.Business.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">country</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.Business.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt id="dm.Business.get_by_code">
 <code class="sig-name descname">get_by_code</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">category_code</span></em>, <em class="sig-param"><span class="n">area_of_interest</span></em>, <em class="sig-param"><span class="n">code_column</span><span class="o">=</span><span class="default_value">'NAICS'</span></em>, <em class="sig-param"><span class="n">name_column</span><span class="o">=</span><span class="default_value">'CONAME'</span></em>, <em class="sig-param"><span class="n">id_column</span><span class="o">=</span><span class="default_value">'LOCNUM'</span></em>, <em class="sig-param"><span class="n">local_threshold</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.Business.get_by_code" title="Permalink to this definition">¶</a></dt>
 <dd><p>Search for businesses based on business category code. In North America, this typically is either the NAICS or

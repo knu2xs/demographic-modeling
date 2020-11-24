@@ -58,7 +58,7 @@ intersphinx_mapping = {
 
 def skip(app, what, name, obj, would_skip, options):
     if name == "__init__":
-        return False
+        return True
     return would_skip
 
 def setup(app):
