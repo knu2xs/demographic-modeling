@@ -31,5 +31,5 @@ dependencies:
     - sphinx
     - sphinxcontrib-napoleon
     - sphinx-autodoc-typehints
-    - sphinx_rtd_theme
+    - rtcat_sphinx_theme
     - twine
