@@ -60,22 +60,40 @@ def get_first_child_key_str(key_path, pattern):
             return key
 
 
-def get_ba_country_key_str(three_letter_country_code):
+def get_ba_country_key_str(three_letter_country_code: str, year: [int, str] = None):
     """Lookup the country registry key by three letter country identifier."""
     cntry_cd = three_letter_country_code.upper()
     cntry_key_lst = get_child_key_strs(r'SOFTWARE\WOW6432Node\Esri\BusinessAnalyst\Datasets')
-    return [k for k in cntry_key_lst if os.path.basename(k).split('_')[0] == cntry_cd][0]
+
+    key_dict = {os.path.basename(k).split('_')[2]: k for k in cntry_key_lst
+                if os.path.basename(k).split('_')[0] == cntry_cd}
+
+    yr_lst = [int(y) for y in key_dict.keys()]
+    yr_lst.sort()
+    assert len(yr_lst)
+
+    if year:
+        year = str(year) if isinstance(year, int) else year
+        assert isinstance(year, str)
+        assert len(year) == 4
+        cntry_key = key_dict[year]
+    else:
+        cntry_key = key_dict[str(yr_lst[-1:][0])]
+        assert len(yr_lst), f'It appears {cntry_cd} {year} is not installed on this machine.'
+
+    return cntry_key
 
 
-def get_ba_key_value(locator_key, three_letter_country_identifier: str = 'USA'):
+def get_ba_key_value(locator_key, three_letter_country_identifier: str = 'USA', year: [int, str] = None):
     """
     In the Business Analyst key, get the value corresponding to the provided locator key.
     :param locator_key: Locator key.
     :param three_letter_country_identifier: Three letter country identification code.
+    :param year: Four digit year describing the vintage of the data.
     :return: Key value.
     """
     # get the registry key string path
-    country_key_str = get_ba_country_key_str(three_letter_country_identifier)
+    country_key_str = get_ba_country_key_str(three_letter_country_identifier, year)
 
     # open the key to the current installation of Business Analyst data
     key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, country_key_str)

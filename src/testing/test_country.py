@@ -22,10 +22,17 @@ def usa_agol():
     return dm.Country('USA', source=gis)
 
 
-def test_geography_implicit():
-    usa = dm.Country('USA')
-    df = usa.geographies
+def test_geography_implicit_year():
+    cntry = dm.Country('USA')
+    df = cntry.geographies
     assert isinstance(df, pd.DataFrame)
+
+
+def test_geography_explicit_year():
+    cntry = dm.Country('USA', year=2019)
+    df = cntry.geographies
+    assert isinstance(df, pd.DataFrame)
+    assert cntry.year == 2019
 
 
 def test_create_geography_level(usa_local):

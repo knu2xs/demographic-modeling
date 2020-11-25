@@ -52,15 +52,23 @@ def _get_lyr(bds_dir, e_lyr):
     return name, alias, col_id, col_name, fc_pth
 
 
-def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = 'USA') -> pd.DataFrame:
+def get_heirarchial_geography_dataframe(three_letter_country_identifier: str = 'USA',
+                                        year: [str, int] = None) -> pd.DataFrame:
     """
     Get a input_dataframe of available demographic geography_level area resolutions.
+
     Args:
-        three_letter_country_identifier: Just like it sounds, the three letter country identifier. Defaults to 'USA'.
+        three_letter_country_identifier: Required
+            Just like it sounds, the three letter country identifier. Defaults to 'USA'.
+        year: Optional
+
+
     Returns: pd.DataFrame ordered from smallest area (block group in USA) to largest area (typically entire country).
     """
-    settings_xml = get_ba_key_value('SettingsFile', three_letter_country_identifier)
-    bds_dir = get_ba_key_value('DemographyDataDir1', three_letter_country_identifier)
+    year = str(year) if isinstance(year, int) else year
+
+    settings_xml = get_ba_key_value('SettingsFile', three_letter_country_identifier, year)
+    bds_dir = get_ba_key_value('DemographyDataDir1', three_letter_country_identifier, year)
 
     tree = ET.parse(settings_xml)
     root = tree.getroot()

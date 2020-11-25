@@ -60,9 +60,18 @@ class Country:
 
     """
 
-    def __init__(self, name: str, source: (str, arcgis.gis.GIS) = None):
+    def __init__(self, name: str, source: (str, arcgis.gis.GIS) = None, year: [int, str] = None):
         self.geo_name = name
         self.source = utils.set_source(source)
+        self.year = year
+
+        # set up the year
+        if self.year is not None:
+            assert isinstance(self.year, (str, int)), 'The year parameter must be either a string or integer, not ' \
+                                                  f'{type(self.year)}'
+            if isinstance(self.year, str):
+                self.year = int(self.year)
+
         self._enrich_variables = None
         self._geographies = None
         self._business = None
@@ -72,7 +81,11 @@ class Country:
             setattr(self, nm, GeographyLevel(nm, self))
 
     def __repr__(self):
-        return f'<dm.Country - {self.geo_name} ({self.source})>'
+        if self.year is None:
+            repr_str = f'<dm.Country - {self.geo_name} ({self.source})>'
+        else:
+            repr_str = f'<dm.Country - {self.geo_name} {self.year} ({self.source})>'
+        return repr_str
 
     def _set_arcpy_ba_country(self):
         """Helper function to set the country in ArcPy."""
@@ -111,7 +124,7 @@ class Country:
     def geographies(self):
         """DataFrame of available geographies."""
         if self._geographies is None and self.source is 'local':
-            self._geographies = get_heirarchial_geography_dataframe(self.geo_name)
+            self._geographies = get_heirarchial_geography_dataframe(self.geo_name, self.year)
 
         elif self._geographies is None and isinstance(self.source, arcgis.gis.GIS):
             raise Exception('Using a GIS instance is not yet implemented.')
