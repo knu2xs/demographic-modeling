@@ -15,6 +15,29 @@ if arcpy_avail:
 
 class Business(object):
 
+    """
+    Just like it sounds, this is a way to search for and find
+    businesses of your own brand for analysis, but more importantly
+    competitor locations facilitating modeling the effects of
+    competition as well. While the Business object can be instantiated
+    directly, it is much easier to simply instantiate from a Country
+    object instance.
+
+    .. code-block::python
+
+        from dm import Country, DemographicModeling
+
+        # start by creating a country object instance
+        usa = Country('USA', source='local')
+
+        # get a geography to work with from locally installed data
+        aoi_df = usa.cbsas.get('seattle')
+
+        # get all competitors for Ace Hardware in Seattle
+        comp_df = usa.business.get_competition('Ace Hardware', aoi_df)
+
+    """
+
     def __init__(self, country):
         self._cntry = country
         self.source = country.source
@@ -90,10 +113,25 @@ class Business(object):
             local_threshold:
                 Number of locations to consider, albeit only in the study area, to categorize the each
                 business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
-                in a new column.
+                in a new column. This enables considering local brands in a market collectively to quantitatively
+                evaluate the power of "buying local."
 
         Returns:
             Spatially Enabled DataFrame of businesses
+
+        .. code-block:: python
+
+            from dm import Country
+
+            # start by creating a country object instance
+            usa = Country('USA', source='local')
+
+            # get a geography to work with from locally installed data
+            aoi_df = usa.cbsas.get('seattle')
+
+            # get all Ace Hardware locations in Seattle
+            comp_df = usa.business.get_by_name('Ace Hardware', aoi_df)
+
         """
         pass
 
@@ -106,21 +144,41 @@ class Business(object):
         SIC code.
 
         Args:
-            category_code: Business category code, such as 4568843, input as a string. This does not have to be a
+            category_code: Required
+                Business category code, such as 4568843, input as a string. This does not have to be a
                 complete code. The tool will search for the category code with a partial code starting from the
                 beginning.
-            area_of_interest: Geographic area to search business listings for businesses in the category.
-            code_column: The column in the business listing data to search for the input business code. In the United
+            area_of_interest: Required
+                Geographic area to search business listings for businesses in the category.
+            code_column: Optional
+                The column in the business listing data to search for the input business code. In the United
                 States, this is either NAICS or SIC. The default is NAICS.
-            name_column: Optional - Name of the column with business names to be searched. Default is 'CONAME'
-            id_column: Optional - Name of the column with the value uniquely identifying each business location. Default
+            name_column: Optional
+                Name of the column with business names to be searched. Default is 'CONAME'
+            id_column: Optional
+                Name of the column with the value uniquely identifying each business location. Default
                 is 'LOCNUM'.
-            local_threshold: Number of locations to consider, albeit only in the study area, to categorize the each
+            local_threshold: Optional
+                Number of locations to consider, albeit only in the study area, to categorize the each
                 business location as either a major brand, and keep the name, or as a local brand with 'local_brand'
                 in a new column.
 
         Returns:
             Spatially Enabled pd.DataFrame
+
+        .. code-block:: python
+
+            from dm import Country
+
+            # start by creating a country object instance
+            usa = Country('USA', source='local')
+
+            # get a geography to work with from locally installed data
+            aoi_df = usa.cbsas.get('seattle')
+
+            # get all the businesses for a NAICS code category
+            naics_big_df = usa.business.get_by_code(4441, aoi_df, local_threshold=2)
+
         """
         pass
 
@@ -151,6 +209,20 @@ class Business(object):
 
         Returns:
             Spatially Enabled DataFrame
+
+        .. code-block:: python
+
+            from dm import Country
+
+            # start by creating a country object instance
+            usa = Country('USA', source='local')
+
+            # get a geography to work with from locally installed data
+            aoi_df = usa.cbsas.get('seattle')
+
+            # get all competitors for Ace Hardware in Seattle
+            comp_df = usa.business.get_competition('Ace Hardware', aoi_df)
+
         """
         pass
 

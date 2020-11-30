@@ -422,7 +422,7 @@ def clean_columns(column_list: list) -> list:
     return [_scrub_col(col) for col in column_list]
 
 
-def get_dataframe(in_features:(pd.DataFrame, str, Path, FeatureLayer), gis: GIS = None):
+def get_dataframe(in_features: [pd.DataFrame, str, Path, FeatureLayer], gis: GIS = None):
     """
     Get a spatially enabled dataframe from the input features provided.
 
