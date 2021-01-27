@@ -144,3 +144,9 @@ def test_country_get_nearest_biz_comp(usa_local):
     comp_df = usa_local.business.get_competition(biz_df, aoi_df)
     near_df = biz_df.dm.get_nearest(comp_df, usa_local)
     assert isinstance(near_df, pd.DataFrame)
+
+
+def test_get_block_groups_local_query(usa_local):
+    query_str = "ID IN ('530670117102','530770034001','530150009003','530770008001','530050108033','530459613002')"
+    bg_df = usa_local.level(0).get(query_string=query_str)
+    assert isinstance(bg_df, pd.DataFrame)

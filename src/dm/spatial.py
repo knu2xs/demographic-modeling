@@ -127,7 +127,7 @@ def _get_weighted_centroid_geometry(sub_df: pd.DataFrame, weighting_column: str,
         sptl_ref: Spatial reference for the output geometry.
         geom_col: Optional - Geometry column, defaults to 'SHAPE'.
 
-    Returns: Tuple of weighted centroid coordinates.
+    Returns: Tuple of weighted centroid Geometry objects.
 
     """
     # check if the weighting sum will be naught
@@ -166,7 +166,7 @@ def get_weighted_centroid(input_dataframe: pd.DataFrame, grouping_column: str, w
     """
     # check the input dataframe
     assert isinstance(input_dataframe, pd.DataFrame)
-    assert input_dataframe.spatial.validate()
+    assert input_dataframe.spatial.validate(), 'A valid Spatially Enabled DataFrame must be provided for '
 
     # ensure the input columns are in the dataframe
     in_cols = input_dataframe.columns
@@ -186,6 +186,7 @@ def get_weighted_centroid(input_dataframe: pd.DataFrame, grouping_column: str, w
 
     # calculate weighted centroids
     centroid_df = input_dataframe.groupby(grouping_column).apply(
-        lambda sub_df: _get_weighted_centroid_geometry(sub_df, weighting_column, sptl_ref, geom_col)).to_frame('SHAPE')
+        lambda sub_df: _get_weighted_centroid_geometry(sub_df, weighting_column, sptl_ref, geom_col)
+    ).to_frame('SHAPE')
 
     return centroid_df

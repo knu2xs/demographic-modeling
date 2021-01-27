@@ -8,7 +8,6 @@ from arcgis.features import GeoAccessor
 from arcgis.geometry import Geometry
 from arcgis.gis import GIS
 import pandas as pd
-import numpy as np
 
 from . import utils
 from .country import Country

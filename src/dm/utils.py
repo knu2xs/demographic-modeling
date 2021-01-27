@@ -315,7 +315,16 @@ def add_enrich_aliases(feature_class: (Path, str), country_object_instance) -> P
 
         # get a dataframe, a single or no row dataframe, correlating to the field name
         fld_df = country_object_instance.enrich_variables[
-            country_object_instance.enrich_variables.enrich_field_name.str.contains(fld_nm)]
+            country_object_instance.enrich_variables.enrich_field_name.str.replace('_', '').str.contains(
+                fld_nm.replace('_', ''), case=False
+            )
+        ]
+
+        # if no field was found, try pattern for non-modified fields - provides pre-Python 1.8.3 support
+        if len(fld_df.index) == 0:
+            fld_df = country_object_instance.enrich_variables[
+                country_object_instance.enrich_variables.enrich_field_name.str.contains(fld_nm, case=False)
+            ]
 
         # if the field name was found, add the alias
         if len(fld_df.index):

@@ -39,7 +39,7 @@ class Country:
 
         from dm import Country
 
-        # instantiate a
+        # instantiate a country
         usa = Country('USA', source='local')
 
         # get the seattle CBSA as a study area
@@ -418,6 +418,10 @@ class GeographyLevel:
             # clean up arcpy litter
             for arcpy_resource in [tmp_fc, sel_lyr]:
                 arcpy.management.Delete(arcpy_resource)
+
+        # ensure something was actually selected
+        assert int(arcpy.management.GetCount(lyr)[0]), 'It appears there are not any features in your selection to ' \
+                                                       '"get".'
 
         # create a spatially enabled dataframe from the data in WGS84
         out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst).dm.project(4326)
