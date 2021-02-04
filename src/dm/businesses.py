@@ -74,7 +74,11 @@ class Business(object):
         lyr = self._local_select_by_location(area_of_interest, lyr)
 
         # convert results to a spatially enabled dataframe
-        out_df = GeoAccessor.from_featureclass(lyr).dm.project(4326)
+        out_df = GeoAccessor.from_featureclass(lyr)
+
+        # project to WGS84 - if there is data even retrieved
+        if len(out_df.index) > 0:
+            out_df = out_df.dm.project(4326)
 
         return out_df
 

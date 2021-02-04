@@ -213,7 +213,7 @@ def standardize_geographic_level_input(geo_df, geo_in):
     elif isinstance(geo_in, int) or isinstance(geo_in, float):
         if geo_in > len(geo_df.index):
             raise Exception(
-                f'Your selector, "{geo_in}", is beyond the maximum range of available geographies.')
+                f'Your selector, "{geo_in}", is beyond the maximum range of available geography_levels.')
         return geo_df.iloc[geo_in]['geo_name']
 
     elif geo_in is None:
@@ -340,7 +340,7 @@ def add_enrich_aliases(feature_class: (Path, str), country_object_instance) -> P
 def geography_iterable_to_arcpy_geometry_list(geography_iterable: [pd.DataFrame, pd.Series, Geometry,
                                                                    list], geometry_filter: str = None) -> list:
     """
-    Processing helper to convert a iterable of geographies to a list of ArcPy Geometry objects suitable for input
+    Processing helper to convert a iterable of geography_levels to a list of ArcPy Geometry objects suitable for input
     into ArcGIS ArcPy geoprocessing tools.
 
     Args:

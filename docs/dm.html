@@ -185,7 +185,7 @@ instance with enrichment configured or ArcGIS Online.</p></li>
 <span class="c1"># get the seattle CBSA as a study area</span>
 <span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
 
-<span class="c1"># use the DemographicAnalysis DataFrame accessor to retrieve geographies</span>
+<span class="c1"># use the DemographicAnalysis DataFrame accessor to retrieve geography_levels</span>
 <span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
 <span class="c1"># get the available enrich variables as as DataFrame</span>
@@ -219,7 +219,7 @@ variables, or data collections. Either <code class="docutils literal notranslate
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> – Spatially Enabled DataFrame with geographies to be
+<li><p><strong>data</strong> – Spatially Enabled DataFrame with geography_levels to be
 enriched.</p></li>
 <li><p><strong>enrich_variables</strong> – Optional iterable of enrich variables to use for
 enriching data. A filtered output from
@@ -242,8 +242,8 @@ enriching data.</p></li>
 
 <dl class="py method">
 <dt id="dm.Country.geographies">
-<em class="property">property </em><code class="sig-name descname">geographies</code><a class="headerlink" href="#dm.Country.geographies" title="Permalink to this definition">¶</a></dt>
-<dd><p>DataFrame of available geographies.</p>
+<em class="property">property </em><code class="sig-name descname">geography_levels</code><a class="headerlink" href="#dm.Country.geographies" title="Permalink to this definition">¶</a></dt>
+<dd><p>DataFrame of available geography_levels.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -255,13 +255,13 @@ country.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>geography_index</strong> (<em>(</em><em>&lt;class 'str'&gt;</em><em>, </em><em>&lt;class 'int'&gt;</em><em>)</em>) – Either the geographic_level geo_name or the
 index of the geography_level level. This can be discovered
-using the <code class="docutils literal notranslate"><span class="pre">Country.geographies</span></code> method.</p>
+using the <code class="docutils literal notranslate"><span class="pre">Country.geography_levels</span></code> method.</p>
 </dd>
 <dt class="field-even">Return type</dt>
 <dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
 </dd>
 <dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Spatially Enabled DataFrame of the requested geographies with
+<dd class="field-odd"><p>Spatially Enabled DataFrame of the requested geography_levels with
 the DemographicModeling accessor properties initialized.</p>
 </dd>
 </dl>
@@ -402,7 +402,7 @@ each nth destinations.</p>
 <dt id="dm.DemographicModeling.level">
 <code class="sig-name descname">level</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">geographic_level</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dm.DemographicModeling.level" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieve a Spatially Enabled DataFrame of geometries corresponding
-to the index returned by the Country.geographies property. This is
+to the index returned by the Country.geography_levels property. This is
 most useful when retrieving the lowest, most granular, level of
 geography within a country.</p>
 <dl class="field-list simple">
@@ -424,7 +424,7 @@ geography within a country.</p>
 <span class="c1"># the get function returns a dataframe with the &#39;dm&#39; property</span>
 <span class="n">metro_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
 
-<span class="c1"># level returns a CountryLevel object enabling getting all geographies</span>
+<span class="c1"># level returns a CountryLevel object enabling getting all geography_levels</span>
 <span class="c1"># falling within the parent dataframe</span>
 <span class="n">lvl_df</span> <span class="o">=</span> <span class="n">metro_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">level</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 </pre></div>

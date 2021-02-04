@@ -45,7 +45,7 @@ class Country:
         # get the seattle CBSA as a study area
         aoi_df = usa.cbsas.get('seattle')
 
-        # use the DemographicAnalysis DataFrame accessor to retrieve geographies
+        # use the DemographicAnalysis DataFrame accessor to retrieve geography_levels
         bg_df = aoi_df.dm.block_groups.get()
 
         # get the available enrich variables as as DataFrame
@@ -121,8 +121,8 @@ class Country:
         return self._enrich_variables
 
     @property
-    def geographies(self):
-        """DataFrame of available geographies."""
+    def geography_levels(self):
+        """DataFrame of available geography_levels."""
         if self._geographies is None and self.source is 'local':
             self._geographies = get_heirarchial_geography_dataframe(self.geo_name, self.year)
 
@@ -141,10 +141,10 @@ class Country:
             geography_index:
                 Either the geographic_level geo_name or the
                 index of the geography_level level. This can be discovered
-                using the ``Country.geographies`` method.
+                using the ``Country.geography_levels`` method.
 
         Returns:
-            Spatially Enabled DataFrame of the requested geographies with
+            Spatially Enabled DataFrame of the requested geography_levels with
             the DemographicModeling accessor properties initialized.
         """
         pass
@@ -172,7 +172,7 @@ class Country:
 
         Args:
             data:
-                Spatially Enabled DataFrame with geographies to be
+                Spatially Enabled DataFrame with geography_levels to be
                 enriched.
             enrich_variables:
                 Optional iterable of enrich variables to use for
@@ -290,7 +290,7 @@ class GeographyLevel:
         elif isinstance(geo_in, int) or isinstance(geo_in, float):
             if geo_in > len(geo_df.index):
                 raise Exception(
-                    f'Your selector, "{geo_in}", is beyond the maximum range of available geographies.')
+                    f'Your selector, "{geo_in}", is beyond the maximum range of available geography_levels.')
             geo_lvl_name = geo_df.iloc[geo_in]['geo_name']
 
         else:
@@ -323,7 +323,7 @@ class GeographyLevel:
         Args:
             geography:
                 Either the geographic_level or the index of the geography_level
-                level. This can be discovered using the Country.geographies method.
+                level. This can be discovered using the Country.geography_levels method.
             selector:
                 If a specific value can be identified using a string, even if
                 just part of the field value, you can insert it here.
@@ -337,7 +337,7 @@ class GeographyLevel:
                 can be used as the starting point to get more specific.
 
         Returns:
-            pd.DataFrame as Geography object instance with the requested geographies.
+            pd.DataFrame as Geography object instance with the requested geography_levels.
         """
         pass
 
@@ -354,9 +354,9 @@ class GeographyLevel:
 
         Args:
             selecting_geography: Either a Spatially Enabled DataFrame, arcgis.Geometry object instance, or list of
-                arcgis.Geometry objects delineating an area of interest to use for selecting geographies for analysis.
+                arcgis.Geometry objects delineating an area of interest to use for selecting geography_levels for analysis.
 
-        Returns: pd.DataFrame as Geography object instance with the requested geographies.
+        Returns: pd.DataFrame as Geography object instance with the requested geography_levels.
         """
         pass
 
@@ -402,7 +402,7 @@ class GeographyLevel:
         # if there is selection data, convert to a layer and use this layer to select features from the above layer.
         if selecting_geography is not None:
 
-            # convert all the selecting geographies to a list of ArcPy Geometries
+            # convert all the selecting geography_levels to a list of ArcPy Geometries
             arcpy_geom_lst = utils.geography_iterable_to_arcpy_geometry_list(selecting_geography, 'polygon')
 
             # create an feature class in memory
@@ -506,7 +506,7 @@ class DemographicModeling:
     def level(self, geographic_level: int) -> GeographyLevel:
         """
         Retrieve a Spatially Enabled DataFrame of geometries corresponding
-        to the index returned by the Country.geographies property. This is
+        to the index returned by the Country.geography_levels property. This is
         most useful when retrieving the lowest, most granular, level of
         geography within a country.
 
@@ -527,7 +527,7 @@ class DemographicModeling:
             # the get function returns a dataframe with the 'dm' property
             metro_df = cntry.cbsas('seattle')
 
-            # level returns a CountryLevel object enabling getting all geographies
+            # level returns a CountryLevel object enabling getting all geography_levels
             # falling within the parent dataframe
             lvl_df = metro_df.dm.level(0).get()
 
@@ -540,7 +540,7 @@ class DemographicModeling:
                                                   f'which is greater than the parent index of {self._geo_idx}. '
 
         # get the name of the geographic level corresponding to the provided index
-        geo_nm = self._cntry.geographies.iloc[geographic_level]['geo_name']
+        geo_nm = self._cntry.geography_levels.iloc[geographic_level]['geo_name']
 
         # create a geographic level object
         geo_lvl = GeographyLevel(geo_nm, self._cntry, self._data)
