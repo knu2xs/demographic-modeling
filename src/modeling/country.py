@@ -1,0 +1,746 @@
+"""
+Functions for countries introspection and Country object providing single interface for data preparation for modeling.
+"""
+import re
+from typing import Union, AnyStr, Tuple
+
+from arcgis.gis import GIS
+from arcgis.features import GeoAccessor
+from arcgis.geometry import Geometry
+import numpy as np
+import pandas as pd
+
+from ._xml_interrogation import get_heirarchial_geography_dataframe  # need this to be added to arcpy._ba
+from .utils import avail_arcpy, local_vs_gis, set_source, geography_iterable_to_arcpy_geometry_list, can_enrich_gis, \
+    has_networkanalysis_gis
+
+if avail_arcpy:
+    import arcpy
+    arcpy.env.overwriteOutput = True
+
+
+def _get_countries_local():
+    """Local introspection to discover what countries are available."""
+    # get a generator of dataset objects
+    ds_lst = list(arcpy._ba.ListDatasets())
+
+    # throw error if no local datasets are available
+    assert len(ds_lst), 'No datasets are available locally. If you want to locate available countries on a Web GIS, ' \
+                        'please provide a GIS object instance as for the source parameter.'
+
+    # organize all the country dataset properites
+    cntry_lst = [
+        (ds.CountryInfo.Name, ds.Version, ds.CountryInfo.ISO2, ds.CountryInfo.ISO3, ds.Caption, ds.DataSourceID, ds.ID)
+        for ds in ds_lst]
+
+    # create a dataframe of the country properties
+    cntry_df = pd.DataFrame(cntry_lst,
+                            columns=['country_name', 'vintage', 'iso2', 'iso3', 'description', 'data_source_id',
+                                     'country_id'])
+
+    # convert the vintage years to integer
+    cntry_df['vintage'] = cntry_df['vintage'].astype('int64')
+
+    # ensure the values are in order by country name and year
+    cntry_df.sort_values(['country_name', 'vintage'], inplace=True)
+
+    # organize the columns
+    cntry_df = cntry_df[['iso2', 'iso3', 'country_name', 'vintage', 'country_id', 'data_source_id']]
+
+    return cntry_df
+
+
+def _get_countries_gis(source):
+    """GIS introspection to discover what countries are available."""
+    # make sure countries are available
+    ge_err_msg = 'The provided GIS instance does not appear to have geoenrichment enabled and configured, so no ' \
+                 'countries are available.'
+    assert 'geoenrichment' in source.properties.helperServices, ge_err_msg
+    assert isinstance(source.properties.helperServices.geoenrichment['url'], str), ge_err_msg
+
+    # extract out the geoenrichment url
+    ge_url = source.properties.helperServices.geoenrichment['url']
+
+    # get a list of countries available on the Web GIS for enrichment
+    url = f'{ge_url}/Geoenrichment/Countries'
+    cntry_res = source._con.post(url, {'f': 'json'})
+    cntry_dict = cntry_res['countries']
+
+    # convert the dictionary to a dataframe
+    cntry_df = pd.DataFrame(cntry_dict)
+
+    # clean up some column names for consistency
+    cntry_df.rename({'id': 'iso2', 'abbr3': 'iso3', 'name': 'country_name', 'altName': 'alt_name',
+                     'defaultDatasetID': 'country_id'}, inplace=True, axis=1)
+    cntry_df.drop(columns=['distanceUnits', 'esriUnits', 'hierarchies', 'currencySymbol', 'currencyFormat',
+                           'defaultDataCollection', 'dataCollections', 'defaultReportTemplate',
+                           'datasets', 'defaultExtent'], inplace=True)
+    cntry_df = cntry_df[['iso2', 'iso3', 'country_name', 'country_id', 'alt_name', 'continent']]
+
+    return cntry_df
+
+
+def get_countries(source: Union[GIS, AnyStr] = 'local') -> pd.DataFrame:
+    """
+    Get the available countries based on the enrichment source.
+    """
+
+    # ensure the source is as expected
+    assert isinstance(source, (str, GIS)), f'Please ensure the "source" is either the "local" keyword, or a valid ' \
+                                           f'GIS object instance instead of "{type(source)}".'
+
+    # if the source is local
+    if isinstance(source, str):
+
+        # make sure the correct keyword is being used to avoid confusion
+        assert source.lower() == 'local', f'If you are interested in countries available locally, please use the ' \
+                                          f'"local" keyword for the "source" parameter. You provided "{source}".'
+
+        # arcpy must be available to perform enrichment locally
+        assert avail_arcpy, 'Local enrichment can only be performed in an environment with the arcpy Python ' \
+                            'package installed and available.'
+
+        # get the local country dataframe
+        cntry_df = _get_countries_local()
+
+    # if we are using accessing a Web GIS object instance
+    elif isinstance(source, GIS):
+
+        # get gis enrichment countries available
+        cntry_df = _get_countries_gis(source)
+
+    return cntry_df
+
+
+def _standardize_geographic_level_input(geo_df, geo_in):
+    """Helper function to check and standardize inputs."""
+    if isinstance(geo_in, str):
+        if geo_in not in geo_df.name.values:
+            names = ', '.join(geo_df.names.values)
+            raise Exception(
+                f'Your selector, "{geo_in}," is not an available selector. Please choose from {names}.')
+        return geo_in
+
+    elif isinstance(geo_in, int) or isinstance(geo_in, float):
+        if geo_in > len(geo_df.index):
+            raise Exception(
+                f'Your selector, "{geo_in}", is beyond the maximum range of available geography_levels.')
+        return geo_df.iloc[geo_in]['geo_name']
+
+    elif geo_in is None:
+        return None
+
+    else:
+        raise Exception('The geographic selector must be a string or integer.')
+
+
+def _get_geographic_level_where_clause(selector=None, selection_field='NAME', query_string=None):
+    """Helper function to consolidate where clauses."""
+    # set up the where clause based on input
+    if query_string:
+        return query_string
+
+    elif selection_field and selector:
+        return f"{selection_field} LIKE '%{selector}%'"
+
+    else:
+        return None
+
+
+def _get_geography_preprocessing(geo_df: pd.DataFrame, geography: Union[str, int], selector: str = None,
+                                 selection_field: str = 'NAME', query_string: str = None,
+                                 aoi_geography: Union[str, int] = None, aoi_selector: str = None,
+                                 aoi_selection_field: str = 'NAME', aoi_query_string: str = None) -> Tuple:
+    """Helper function consolidating input parameters for later steps."""
+    # standardize the geography_level input
+    geo = _standardize_geographic_level_input(geo_df, geography)
+    aoi_geo = _standardize_geographic_level_input(geo_df, aoi_geography)
+
+    # consolidate selection
+    where_clause = _get_geographic_level_where_clause(selector, selection_field, query_string)
+    aoi_where_clause = _get_geographic_level_where_clause(aoi_selector, aoi_selection_field, aoi_query_string)
+
+    return geo, aoi_geo, where_clause, aoi_where_clause
+
+
+class Country:
+    """Country objects are instantiated by providing the three letter country identifier
+    and optionally also specifying the source. If the source is not explicitly specified
+    Country will use local resources if the environment is part of an ArcGIS Pro
+    installation with Business Analyst enabled and local data installed. If this is not
+    the case, Country will then attempt to use the active GIS object instance if available.
+    Also, if a GIS object is explicitly passed in, this will be used.
+
+    Args:
+        name: Three letter country identifier.
+        source: Optional 'local' or a GIS object instance referencing an ArcGIS Enterprise
+            instance with enrichment configured or ArcGIS Online. If not explicitly
+            specified, will attempt to use locally installed data with Pro and Business
+            analyst first. If this is not available, will look for an active GIS. If
+            no active GIS, a GIS object will need to be explicitly provided with
+            permissions to perform enrichment.
+        year: Optional and only applicable if using local data. In cases where models
+            have been developed against a specific vintage (year) of data, this affords the
+            ability to enrich data for this specific year to support these models.
+
+    .. code-block:: python
+
+        from arcgis.modeling import Country
+
+        # instantiate a country
+        usa = Country('USA', source='local')
+
+        # get the seattle CBSA as a study area
+        aoi_df = usa.cbsas.get('seattle')
+
+        # use the Modeling DataFrame accessor to retrieve the block groups in seattle
+        bg_df = aoi_df.mdl.block_groups.get()
+
+        # get the available enrich variables as as DataFrame
+        e_vars = usa.enrich_variables
+
+        # filter the variables to just the current year key variables
+        key_vars = e_vars[(e_vars.data_collection.str.startswith('Key')) &
+                          (e_vars.name.str.endswith('CY'))]
+
+        # enrich the data through the Modeling DataFrame accessor
+        e_df = bg_df.mdl.enrich(key_vars)
+
+    """
+    def __init__(self, name: str, source: Union[str, GIS] = None, year: int = None):
+
+        # set the source implicitly if necessary based on what is available
+        self.source = set_source(source)
+
+        # make sure the source is either local or an GIS instance
+        source_err = 'The source must either be set to "local" or a GIS object instance.'
+        assert isinstance(self.source, (str, GIS)), source_err
+        if isinstance(self.source, str):
+            self.source = self.source.lower()  # account for possibility of entering caps for some reason
+            assert self.source == 'local', source_err
+
+        # ensure not trying to set the year for using online data
+        if isinstance(self.source, GIS) and year is not None:
+            raise Exception('A year can only be explicitly defined when working with locally installed resources, '
+                            'not with a GIS instance.')
+
+        # make sure the year, if provided, is an integer
+        if year is not None:
+            assert isinstance(year, int), f'The year parameter must be an integer, not {type(year)}'
+
+        self.geo_name = name.upper()
+        self.year = year
+        self.dataset_id = None
+        self._enrich_variables = None
+        self._geo_id = None
+        self._geography_levels = None
+        self._business = None
+        self._cntry_df = get_countries(self.source)
+
+        # set the geo_name to the iso3 value if the iso2 was provided
+        if self.geo_name in set(self._cntry_df['iso2'].values):
+            self.geo_name = self._cntry_df[self._cntry_df.iso2 == self.geo_name].iloc[0]['iso3']
+
+        # ensure the input country name is valid
+        assert self.geo_name in self._cntry_df.iso3.drop_duplicates().sort_values().values, \
+               'Please choose a valid three letter country identifier (ISO3). You can get a list of valid values ' \
+               'using the "modeling.get_countries" method.'
+
+        # if the data source is local, but no year was provided, get the year
+        if self.source == 'local' and self.year is None:
+            self.year = self._cntry_df[self._cntry_df['iso3'] == self.geo_name].vintage.max()
+
+        # if the year is provided, validate
+        elif self.source == 'local' and self.year is not None:
+            lcl_yr_vals = (self._cntry_df[self._cntry_df['iso3'] == self.geo_name]['vintage']).values
+            assert self.year in lcl_yr_vals, f'The year you are provided, {self.year} is not among the available ' \
+                                             f'years ({", ".join([str(v) for v in lcl_yr_vals])}) for {self.geo_name}'
+
+        # get the geo_id, the identifier BA uses to know what dataset to use when using local data
+        if self.source == 'local':
+            self._geo_id = self._cntry_df[
+                (self._cntry_df['iso3'] == self.geo_name)
+                & (self._cntry_df['vintage'] == self.year)
+            ].iloc[0]['country_id']
+
+        # set the iso2 property
+        self.iso2 = self._cntry_df[self._cntry_df.iso3 == self.geo_name].iloc[0]['iso2']
+
+        # grab the default dataset id, needed for working with online data
+        self.dataset_id = self._cntry_df[self._cntry_df.iso3 == self.geo_name].iloc[0]['country_id']
+
+        # add on all the geographic resolution levels as properties
+        for nm in self.geography_levels['geo_name']:
+            setattr(self, nm, GeographyLevel(nm, self))
+
+    def __repr__(self):
+        if self.source == 'local':
+            repr_str = f'<modeling.Country - {self.geo_name} ({self.source} {self.year})>'
+        elif isinstance(self.source, GIS) and self.source.users.me is None:
+            repr_str = f'<modeling.Country - {self.geo_name} (GIS at {self.source.url} )>'
+        else:
+            gis = self.source
+            repr_str = f'<modeling.Country - {self.geo_name} (GIS at {gis.url} logged in as {gis.users.me.username})>'
+        return repr_str
+
+    def _set_arcpy_ba_country(self):
+        """Helper function to set the country in ArcPy."""
+        cntry_df = _get_countries_local()
+        geo_ref = cntry_df[cntry_df['country'] == self.geo_name]['geo_ref'].iloc[0]
+        arcpy.env.baDataSource = f'LOCAL;;{geo_ref}'
+        return
+
+    @property
+    def _enrich_variables_local(self):
+        """Local implementation getting enrichment variables."""
+        # retrieve variable objects
+        var_gen = arcpy._ba.ListVariables(self._geo_id)
+
+        # use a list comprehension to unpack the properties of the variables into a dataframe
+        var_df = pd.DataFrame(
+            ((v.Name, v.Alias, v.DataCollectionID, v.FullName, v.OutputFieldName) for v in var_gen),
+            columns=['name', 'alias', 'data_collection', 'enrich_name', 'enrich_field_name']
+        )
+
+        return var_df
+
+    @property
+    def _enrich_variables_gis(self):
+        """GIS implementation getting enrichment variables."""
+        # get the data collections from the GIS enrichment REST endpiont
+        params = {'f': 'json'}
+        res = self.source._con.get(
+            f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/DataCollections/{self.iso2}',
+            params=params)
+        assert 'DataCollections' in res.keys(), 'Could not retrieve enrichment variables (DataCollections) from ' \
+                                                'the GIS instance.'
+
+        # list to store all the dataframes as they are created for each data collection
+        mstr_lst = []
+
+        # iterate the data collections
+        for col in res['DataCollections']:
+            # create a dataframe of the variables, keep only needed columns, and add the data collection name
+            coll_df = pd.json_normalize(col['data'])[['id', 'alias', 'description', 'vintage', 'units']]
+            coll_df['data_collection'] = col['dataCollectionID']
+
+            # schema cleanup
+            coll_df.rename(columns={'id': 'name'}, inplace=True)
+            coll_df = coll_df[['name', 'alias', 'data_collection', 'description', 'vintage', 'units']]
+
+            # append the list
+            mstr_lst.append(coll_df)
+
+        # combine all the dataframes into a single master dataframe
+        mstr_df = pd.concat(mstr_lst)
+
+        # create the column for enrichment
+        mstr_df.insert(3, 'enrich_name', mstr_df.data_collection + '.' + mstr_df.name)
+
+        # create column for matching to previously enriched column names
+        regex = re.compile(r"(^\d+)")
+        fld_vals = mstr_df.enrich_name.apply(lambda val: regex.sub(r"F\1", val.replace(".", "_")))
+        mstr_df.insert(4, 'enrich_field_name', fld_vals)
+
+        return mstr_df
+
+    def verify_can_enrich(self):
+        """If the country enrich instance can enrich based on the permissions. Only relevant if source is a GIS
+        instance."""
+        if isinstance(self.source, GIS):
+            can_e = can_enrich_gis(self.source.users.me) if self.source.users.me is not None else False
+        else:
+            can_e = True
+        return can_e
+
+    def verify_can_perform_network_analysis(self, network_function: str = None) -> bool:
+        """If the country enrich instance can perform transportation network analysis based on permissions. Only
+        relevant if the source is a GIS instance.
+
+        Args:
+            network_function: Optional string describing specific network function to check for.
+            Valid values include 'closestfacility', 'locationallocation', 'optimizedrouting',
+            'origindestinationcostmatrix', 'routing', 'servicearea', or 'vehiclerouting'.
+
+        Returns: Boolean indicating if the country instance, based on permissions, has network analysis privileges.
+        """
+        if isinstance(self.source, GIS):
+            if self.source.users.me is not None:
+                can_net = has_networkanalysis_gis(self.source.users.me, network_function)
+            else:
+                can_net = False
+        else:
+            can_net = True
+        return can_net
+
+    @property
+    def geography_levels(self):
+        """DataFrame of available geography levels."""
+        if self._geography_levels is None and self.source == 'local':
+            self._geography_levels = get_heirarchial_geography_dataframe(self.geo_name, self.year)
+
+        # if source is a GIS instance
+        elif self._geography_levels is None and isinstance(self.source, GIS):
+
+            # unpack the geoenrichment url from the properties
+            enrich_url = self.source.properties.helperServices.geoenrichment.url
+
+            # construct the url to the standard geography levels
+            url = f'{enrich_url}/Geoenrichment/standardgeographylevels'
+
+            # get the geography levels from the enrichment server
+            res_json = self.source._con.post(url, {'f': 'json'})
+
+            # unpack the geography levels from the json
+            geog_lvls = res_json['geographyLevels']
+
+            # get matching geography levels out of the list of countries
+            for lvl in geog_lvls:
+                if lvl['countryID'] == self.iso2:
+                    geog = lvl
+                    break
+
+            # get the hierarchical levels out as a dataframe
+            self._geography_levels = pd.DataFrame(geog['hierarchies'][0]['levels'])
+
+            # create the geo_name to use for identifying the levels
+            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().str.replace(' ', '_').\
+                str.replace('(', '').str.replace(')', '')
+
+            # reverse the sorting so the smallest is at the top
+            self._geography_levels = self._geography_levels.iloc[::-1].reset_index(drop=True)
+
+            # clean up the field names so they follow more pythonic conventions
+            self._geography_levels = self._geography_levels[['geo_name', 'name', 'adminLevel', 'singularName',
+                                                             'pluralName', 'id']].copy()
+            self._geography_levels.columns = ['geo_name', 'geo_alias', 'admin_level', 'singular_name', 'plural_name',
+                                              'id']
+
+        return self._geography_levels
+
+    @property
+    def levels(self):
+        """Dataframe of available geography levels. (Alias of geography_levels.)"""
+        return self.geography_levels
+
+    @property
+    def enrich_variables(self):
+        """DataFrame of all the available enrichment variables."""
+        if self._enrich_variables is None and self.source == 'local':
+            self._enrich_variables = self._enrich_variables_local
+
+        elif self._enrich_variables is None and isinstance(self.source, GIS):
+            self._enrich_variables = self._enrich_variables_gis
+
+        # add on the country for subsequent analysis in the dataframe metatdata
+        self._enrich_variables.attrs['_cntry'] = self
+
+        return self._enrich_variables
+
+    @local_vs_gis
+    def level(self, geography_index: (str, int)) -> pd.DataFrame:
+        """
+        Get an available ``geography_level`` in the country.
+
+        Args:
+            geography_index:
+                Either the geographic_level geo_name or the
+                index of the geography_level level. This can be discovered
+                using the ``Country.geography_levels`` method.
+
+        Returns:
+            Spatially Enabled DataFrame of the requested geography_level with
+            the Modeling accessor properties initialized.
+        """
+        pass
+
+    def _level_local(self, geography_index: Union[str, int]) -> pd.DataFrame:
+        """Local implementation of level."""
+        # get the geo_name of the geography
+        if isinstance(geography_index, int):
+            nm = self.geography_levels.iloc[geography_index]['geo_name']
+
+        elif isinstance(geography_index, str):
+            nm = geography_index
+        else:
+            raise Exception(f'geography_index must be either a string or integer, not {type(geography_index)}')
+
+        # create a GeographyLevel object instance
+        return GeographyLevel(nm, self)
+
+    @local_vs_gis
+    def enrich(self, data: pd.DataFrame,
+               enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame]) -> pd.DataFrame:
+        """
+        Enrich a spatially enabled dataframe using either a enrichment
+        variables defined using a Python List, NumPy Array or Pandas
+        Series of enrich names. Also, a filtered enrich variables Pandas
+        DataFrame can also be used.
+
+        Args:
+            data:
+                Spatially Enabled DataFrame with geography_levels to be
+                enriched.
+            enrich_variables:
+                Optional iterable of enrich variables to use for
+                enriching data. Filtered output from
+                Country.enrich_variables can also be used.
+
+        Returns:
+            Spatially Enabled DataFrame with enriched data added.
+        """
+        pass
+
+    def _enrich_local(self, data,
+                      enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
+        """Implementation of enrich for local analysis."""
+
+        # if just a single variable is provided pipe it into a list
+        enrich_variables = [enrich_variables] if isinstance(enrich_variables, str) else enrich_variables
+
+        # if the enrich dataframe is passed in, recognize and work with it
+        if isinstance(enrich_variables, pd.DataFrame):
+            if 'enrich_str' in enrich_variables.columns:
+                enrich_variables = enrich_variables['enrich_str']
+
+        # ensure all the enrich variables are available
+        enrich_vars = pd.Series(enrich_variables)
+        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables.enrich_str)]
+        if len(missing_vars):
+            raise Exception('Some of the variables you provided are not available for enrichment '
+                            f'[{", ".join(missing_vars)}]')
+
+        # check to make sure there are variables for enrichment
+        if len(enrich_variables) == 0:
+            raise Exception('There appear to be no variables being selected for enrichment.')
+
+        # combine all the enrichment variables into a single string for input into the enrich tool
+        enrich_str = ';'.join(enrich_variables)
+
+        # convert the geometry column to a list of arcpy geometry objects
+        geom_lst = list(data['SHAPE'].apply(lambda geom: geom.as_arcpy).values)
+
+        # set the arcpy environment to the correct country
+        self._set_arcpy_ba_country()
+
+        # invoke the enrich method to get the data
+        enrich_fc = arcpy.ba.EnrichLayer(
+            in_features=geom_lst,
+            out_feature_class='memory/enrich_tmp',
+            variables=enrich_str
+        )[0]
+
+        # get the Object ID field for schema cleanup
+        oid_col = arcpy.Describe(enrich_fc).OIDFieldName
+
+        # convert the enrich feature class to a dataframe and do some schema cleanup
+        enrich_df = GeoAccessor.from_featureclass(enrich_fc)
+        drop_cols = [c for c in enrich_df.columns if c in [oid_col, 'HasData', 'aggregationMethod', 'SHAPE']]
+        enrich_df.drop(columns=drop_cols, inplace=True)
+
+        # combine the two dataframes for output
+        out_df = pd.concat([data, enrich_df], axis=1, sort=False)
+
+        # organize the columns so geometry is the last column
+        attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']
+        out_df = out_df[attr_cols]
+
+        # ensure this dataframe will be recognized as spatially enabled
+        out_df.spatial.set_geometry('SHAPE')
+
+        # ensure WGS84
+        out_data = out_df.mdl.project(4326)
+
+        # add the country onto the metadata
+        out_data.attrs['_cntry'] = self
+
+        return out_data
+
+
+class GeographyLevel:
+
+    def __init__(self, geographic_level: (str, int), country: Country, parent_data: (pd.DataFrame, pd.Series) = None):
+        self._cntry = country
+        self.source = country.source
+        self.geo_name = self._standardize_geographic_level_input(geographic_level)
+        self._resource = None
+        self._parent_data = parent_data
+
+    def __repr__(self):
+        return f'<class: GeographyLevel - {self.geo_name}>'
+
+    def _standardize_geographic_level_input(self, geo_in: Union[str, int]) -> str:
+        """Helper function to check and standardize named input or integers to geographic heirarchial levels."""
+
+        geo_df = self._cntry.geography_levels
+
+        if isinstance(geo_in, str):
+            if geo_in not in geo_df.geo_name.values:
+                names = ', '.join(geo_df.geo_name.values)
+                raise Exception(
+                    f'Your selector, "{geo_in}," is not an available selector. Please choose from {names}.')
+            geo_lvl_name = geo_in
+
+        elif isinstance(geo_in, int) or isinstance(geo_in, float):
+            if geo_in > len(geo_df.index):
+                raise Exception(
+                    f'Your selector, "{geo_in}", is beyond the maximum range of available geography_levels.')
+            geo_lvl_name = geo_df.iloc[geo_in]['geo_name']
+
+        else:
+            raise Exception('The geographic selector must be a string or integer.')
+
+        return geo_lvl_name
+
+    @property
+    def resource(self):
+        """The resource, either a layer or Feature Layer, for accessing the data for the geographic layer."""
+        if self._resource is None and self._cntry.source == 'local':
+            self._resource = self._cntry.geography_levels[self._cntry.geography_levels['geo_name'] == self.geo_name].iloc[0][
+                'feature_class_path']
+
+        elif self._resource is None and isinstance(self._cntry.source, GIS):
+            raise Exception('Using a GIS instance not yet implemented.')
+
+        return self._resource
+
+    @local_vs_gis
+    def get(self, geography: (str, int), selector: str = None, selection_field: str = 'NAME',
+            query_string: str = None, return_geometry: bool = False) -> pd.DataFrame:
+        """ Get a DataFrame at an available geography_level level. Since frequently
+        working within an area of interest defined by a higher level of
+        geography_level, typically a CBSA or DMA, the ability to specify this
+        area using input parameters is also included. This dramatically speeds
+        up the process of creating the output.
+
+        Args:
+            geography: Either the geographic_level or the index of the geography_level
+                level. This can be discovered using the Country.geography_levels method.
+            selector: If a specific value can be identified using a string, even if
+                just part of the field value, you can insert it here.
+            selection_field: This is the field to be searched for the string values
+                input into selector.
+            query_string: If a more custom query is desired to filter the output, please
+                use SQL here to specify the query. The normal query is "UPPER(NAME) LIKE
+                UPPER('%<selector>%')". However, if a more specific query is needed, this
+                can be used as the starting point to get more specific.
+            return_geometry: Boolean indicating if geometry should be returned. While
+                typically the case, there are instances where it is useful to not
+                retrieve the geometries. This includes when getting a query right to only
+                retrieve one area of interest. It also can be useful for only getting the
+                block group id's within an area of interest.
+
+        Returns:
+            Spatially Enabled pd.DataFrame.
+        """
+        pass
+
+    def _get_local(self, selector: (str, list) = None, selection_field: str = 'NAME',
+                   query_string: str = None, return_geometry: bool = False) -> pd.DataFrame:
+
+        # if not returning the geometry, use a search cursor - MUCH faster
+        if not return_geometry:
+
+            # create or use the input query parameters
+            sql = self._get_sql_helper(selector, selection_field, query_string)
+
+            # create an output series of names filtered using the query
+            out_srs = pd.Series(
+                r[0] for r in arcpy.da.SearchCursor(self.resource, field_names='NAME', where_clause=sql))
+            out_srs.name = 'geo_name'
+
+            # convert the series to a dataframe for consistency
+            out_df = out_srs.to_frame()
+
+        # otherwise, got the SeDF route
+        else:
+            out_df = self._get_local_df(selector, selection_field, query_string, self._parent_data)
+
+        return out_df
+
+    @local_vs_gis
+    def within(self, selecting_geography: (pd.DataFrame, Geometry, list)) -> pd.DataFrame:
+        """
+        Get a input_dataframe at an available geography_level level falling within
+        a defined selecting geography.
+
+        Args:
+            selecting_geography: Either a Spatially Enabled DataFrame, arcgis.Geometry object instance, or list of
+                arcgis.Geometry objects delineating an area of interest to use for selecting geography_levels for
+                analysis.
+
+        Returns: pd.DataFrame as Geography object instance with the requested geography_levels.
+        """
+        pass
+
+    def _within_local(self, selecting_geography: (pd.DataFrame, Geometry, list)) -> pd.DataFrame:
+        """Local implementation of within."""
+        return self._get_local_df(selecting_geography=selecting_geography)
+
+    def _get_sql_helper(self, selector: (str, list) = None, selection_field: str = 'NAME',
+                        query_string: str = None):
+        """Helper to handle creation of sql queries for get functions."""
+        if query_string:
+            sql = query_string
+        elif selection_field and isinstance(selector, list):
+            sql_lst = [f"UPPER({selection_field}) LIKE UPPER('%{sel}%')" for sel in selector]
+            sql = ' OR '.join(sql_lst)
+        elif selection_field and isinstance(selector, str):
+            sql = f"UPPER({selection_field}) LIKE UPPER('%{selector}%')"
+        else:
+            sql = None
+
+        return sql
+
+    def _get_local_df(self, selector: (str, list) = None, selection_field: str = 'NAME',
+                      query_string: str = None,
+                      selecting_geography: (pd.DataFrame, pd.Series, Geometry, list) = None) -> pd.DataFrame:
+        """Single function handling business logic for both _get_local and _within_local."""
+        # set up the where clause based on input enabling overriding using a custom query if desired
+        sql = self._get_sql_helper(selector, selection_field, query_string)
+
+        # get the relevant geography_level row from the data
+        row = self._cntry.geography_levels[self._cntry.geography_levels['geo_name'] == self.geo_name].iloc[0]
+
+        # get the id and geographic_level fields along with the path to the data from the row
+        fld_lst = [row['col_id'], row['col_name']]
+        pth = row['feature_class_path']
+
+        # use the query string, if provided, to create and return a layer with the output fields
+        if sql is None:
+            lyr = arcpy.management.MakeFeatureLayer(pth)[0]
+        else:
+            lyr = arcpy.management.MakeFeatureLayer(pth, where_clause=sql)[0]
+
+        # if there is selection data, convert to a layer and use this layer to select features from the above layer.
+        if selecting_geography is not None:
+
+            # convert all the selecting geography_levels to a list of ArcPy Geometries
+            arcpy_geom_lst = geography_iterable_to_arcpy_geometry_list(selecting_geography, 'polygon')
+
+            # create an feature class in memory
+            tmp_fc = arcpy.management.CopyFeatures(arcpy_geom_lst, 'memory/tmp_poly')[0]
+
+            # create a layer using the temporary feature class
+            sel_lyr = arcpy.management.MakeFeatureLayer(tmp_fc)[0]
+
+            # select local features using the temporary selection layer
+            arcpy.management.SelectLayerByLocation(in_layer=lyr, overlap_type='HAVE_THEIR_CENTER_IN',
+                                                   select_features=sel_lyr)
+
+            # clean up arcpy litter
+            for arcpy_resource in [tmp_fc, sel_lyr]:
+                arcpy.management.Delete(arcpy_resource)
+
+        # ensure something was actually selected
+        assert int(arcpy.management.GetCount(lyr)[0]), 'It appears there are not any features in your selection to ' \
+                                                       '"get".'
+
+        # create a spatially enabled dataframe from the data in WGS84
+        out_data = GeoAccessor.from_featureclass(lyr, fields=fld_lst).mdl.project(4326)
+
+        # tack on the country and geographic level name for potential use later
+        out_data.attrs['_cntry'] = self._cntry
+        out_data.attrs['geo_name'] = self.geo_name
+
+        return out_data
