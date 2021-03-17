@@ -288,9 +288,7 @@ class Country:
 
     def _set_arcpy_ba_country(self):
         """Helper function to set the country in ArcPy."""
-        cntry_df = _get_countries_local()
-        geo_ref = cntry_df[cntry_df['country'] == self.geo_name]['geo_ref'].iloc[0]
-        arcpy.env.baDataSource = f'LOCAL;;{geo_ref}'
+        arcpy.env.baDataSource = f'LOCAL;;{self.dataset_id}'
         return
 
     @property
@@ -556,12 +554,12 @@ class Country:
 
         # if the enrich dataframe is passed in, recognize and work with it
         if isinstance(enrich_variables, pd.DataFrame):
-            if 'enrich_str' in enrich_variables.columns:
-                enrich_variables = enrich_variables['enrich_str']
+            if 'enrich_name' in enrich_variables.columns:
+                enrich_variables = enrich_variables['enrich_name']
 
         # ensure all the enrich variables are available
         enrich_vars = pd.Series(enrich_variables)
-        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables.enrich_str)]
+        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables.enrich_name)]
         if len(missing_vars):
             raise Exception('Some of the variables you provided are not available for enrichment '
                             f'[{", ".join(missing_vars)}]')

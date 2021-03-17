@@ -52,7 +52,7 @@ def local_vs_gis(fn):
 
         # if another source, we don't plan on doing that any time soon
         else:
-            raise AttributeError(f"'{self.source}' is not a recognized demographic modeling source.")
+            raise AttributeError(f"'{self.source}' is not a recognized modeling source.")
 
         return fn_to_call(*args, **kwargs)
 

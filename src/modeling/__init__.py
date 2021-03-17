@@ -1,5 +1,5 @@
 """
-The arcgis.modeling module provides capabilities supporting quantitative geographic analysis.
+The modeling module provides capabilities supporting quantitative geographic analysis.
 """
 from .country import Country, get_countries
 from .accessor import Modeling

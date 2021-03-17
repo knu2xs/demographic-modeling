@@ -169,7 +169,7 @@ class Modeling:
         data = self._data
 
         # invoke the enrich method from the country
-        out_df = cntry.enrich(data, enrich_variables, data_collections)
+        out_df = cntry.enrich(data, enrich_variables)
 
         return out_df
 
