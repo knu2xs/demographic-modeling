@@ -549,6 +549,10 @@ class Country:
         """Provide flexibility for enrich variable preprocessing."""
         # enrich variable dataframe column name
         enrch_str_col = 'enrich_name'
+        enrich_nm_col = 'name'
+
+        # TODO: handle name or enrich_name
+        # TODO: drop duplicate names
 
         # if just a single variable is provided pipe it into a list
         enrich_variables = [enrich_variables] if isinstance(enrich_variables, str) else enrich_variables
@@ -572,17 +576,15 @@ class Country:
         if len(enrich_variables) == 0:
             raise Exception('There appear to be no variables being selected for enrichment.')
 
-        # combine all the enrichment variables into a single string for input into the enrich tool
-        enrich_str = ';'.join(enrich_variables)
+        return enrich_variables
 
-        return enrich_str
-
-    def _enrich_local(self, data,
+    def _enrich_local(self, data: pd.DataFrame,
                       enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
         """Implementation of enrich for local analysis."""
 
-        # preprocess the enrich variables
-        enrich_str = self._enrich_variable_preprocessing(enrich_variables)
+        # preprocess and combine all the enrichment variables into a single string for input into the enrich tool
+        evars = self._enrich_variable_preprocessing(enrich_variables)
+        enrich_str = ';'.join(evars)
 
         # convert the geometry column to a list of arcpy geometry objects
         geom_lst = list(data['SHAPE'].apply(lambda geom: geom.as_arcpy).values)
@@ -609,8 +611,7 @@ class Country:
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 
         # organize the columns so geometry is the last column
-        attr_cols = [c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']
-        out_df = out_df[attr_cols]
+        out_df = out_df[[c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']]
 
         # ensure this dataframe will be recognized as spatially enabled
         out_df.spatial.set_geometry('SHAPE')
@@ -618,10 +619,81 @@ class Country:
         # ensure WGS84
         out_data = out_df.mdl.project(4326)
 
+        # rename the columns for schema consistency with REST responses
+        e_vars_df = self.enrich_variables[[n in out_df.columns for n in self.enrich_variables.enrich_field_name]]
+        col_nm_map = pd.Series(e_vars_df['name'].values, index=e_vars_df['enrich_field_name']).to_dict()
+        out_df.rename(col_nm_map, axis=1, inplace=True)
+
         # add the country onto the metadata
         out_data.attrs['_cntry'] = self
 
         return out_data
+
+    def _enrich_gis(self, data: pd.DataFrame,
+                    enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
+        """Implementation of enrich for analysis using Web GIS."""
+        evars = self._enrich_variable_preprocessing(enrich_variables)
+
+        # initialize the params for the REST call
+        params = {
+            'f': 'json',
+            'analysisVariables': list(evars),
+            'returnGeometry': False  # because we already have the geometry
+        }
+
+        # if working with data derived from standard geographies
+        if 'parent_geo' in data.attrs:
+            params['studyAreas'] = [{
+                "sourceCountry": data.attrs['parent_geo']['resource'].split('.')[0],
+                "layer": data.attrs['parent_geo']['resource'],
+                "ids": data.attrs['parent_geo']['id']
+            }]
+
+        # if not standard geographies, working with geometries
+        else:
+
+            # validate the spatial property
+            assert data.spatial.validate(), 'The input data does not appear to be a valid Spatially Enabled ' \
+                                            'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
+
+            # format the features for sending - keep it light, just the geometry
+            params['studyAreas'] = data[data.spatial.name].to_frame().spatial.to_featureset().features
+
+            # get the input spatial reference
+            params['insr'] = data.spatial.sr
+
+        # send the request to the server using post because if sending geometry, the message can be big
+        r_json = self.source._con.post(
+            f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/Enrich',
+            params=params)
+
+        # ensure a valid result is received
+        if 'error' in r_json:
+            err = r_json['error']
+            raise Exception(f'Error in enriching data using Business Analyst Enrich REST endpoint. Error Code '
+                            f'{err["code"]}: {err["message"]}')
+
+        # unpack the enriched results - reaching into the FeatureSet for just the attributes since not getting geometry
+        r_df = pd.DataFrame([f['attributes'] for f in r_json['results'][0]['value']['FeatureSet'][0]['features']])
+
+        # get just the columns with the enrich data requested
+        evar_mstr = self.enrich_variables
+        evars_df = evar_mstr[[n in evars.str.lower().values for n in evar_mstr['enrich_name'].str.lower()]]
+        e_col_lst = [n for n in r_df.columns if n in evars_df['name'].values]
+
+        # filter the response dataframe to just enrich columns
+        e_df = r_df[e_col_lst]
+
+        # add the enrich data onto the original data
+        out_df = pd.concat([data, e_df], axis=1, sort=False)
+
+        # shuffle columns so geometry is at the end
+        out_df = out_df[[c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']]
+
+        # set the geometry so the GeoAccessor knows it is an SeDF
+        out_df.spatial.set_geometry('SHAPE')
+
+        return out_df
 
 
 class GeographyLevel:
