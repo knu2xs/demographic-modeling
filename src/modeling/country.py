@@ -545,21 +545,25 @@ class Country:
         """
         pass
 
-    def _enrich_local(self, data,
-                      enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
-        """Implementation of enrich for local analysis."""
+    def _enrich_variable_preprocessing(self, enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame]):
+        """Provide flexibility for enrich variable preprocessing."""
+        # enrich variable dataframe column name
+        enrch_str_col = 'enrich_name'
 
         # if just a single variable is provided pipe it into a list
         enrich_variables = [enrich_variables] if isinstance(enrich_variables, str) else enrich_variables
 
         # if the enrich dataframe is passed in, recognize and work with it
         if isinstance(enrich_variables, pd.DataFrame):
-            if 'enrich_name' in enrich_variables.columns:
-                enrich_variables = enrich_variables['enrich_name']
+            if enrch_str_col in enrich_variables.columns:
+                enrich_variables = enrich_variables[enrch_str_col]
+            else:
+                raise Exception(f'It appears the dataframe used for enrichment does not have the column with enrich '
+                                f'string names ({enrch_str_col}).')
 
         # ensure all the enrich variables are available
         enrich_vars = pd.Series(enrich_variables)
-        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables.enrich_name)]
+        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables[enrch_str_col])]
         if len(missing_vars):
             raise Exception('Some of the variables you provided are not available for enrichment '
                             f'[{", ".join(missing_vars)}]')
@@ -570,6 +574,15 @@ class Country:
 
         # combine all the enrichment variables into a single string for input into the enrich tool
         enrich_str = ';'.join(enrich_variables)
+
+        return enrich_str
+
+    def _enrich_local(self, data,
+                      enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
+        """Implementation of enrich for local analysis."""
+
+        # preprocess the enrich variables
+        enrich_str = self._enrich_variable_preprocessing(enrich_variables)
 
         # convert the geometry column to a list of arcpy geometry objects
         geom_lst = list(data['SHAPE'].apply(lambda geom: geom.as_arcpy).values)
