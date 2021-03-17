@@ -182,60 +182,6 @@ def has_networkanalysis_gis(user: User, network_function: str = None) -> bool:
     return bool_net
 
 
-def add_enrich_aliases(feature_class: (Path, str), country_object_instance) -> Path:
-    """
-    Add human readable aliases to an enriched feature class.
-
-    Args:
-        feature_class: Path | str
-            Path to the enriched feature class.
-        country_object_instance: dm.Country
-            County object instance for the same country used for initial enrichment.
-
-    Returns: Path
-        Path to feature class with aliases added.
-    """
-    # make sure arcpy is available because we need it
-    assert avail_arcpy, 'add_enrich_aliases requires arcpy to be available since working with ArcGIS Feature Classes'
-    import arcpy
-
-    # since arcpy tools cannot handle Path objects, convert to string
-    feature_class = str(feature_class) if isinstance(feature_class, Path) else feature_class
-
-    # if, at this point, the path is not a string, something is wrong
-    if not isinstance(feature_class, str):
-        raise Exception(f'The feature_class must be either a Path or string, not {type(feature_class)}.')
-
-    # start by getting a list of all the field names
-    fld_lst = [f.name for f in arcpy.ListFields(feature_class)]
-
-    # iterate through the field names and if the field is an enrich field, add the alias
-    for fld_nm in fld_lst:
-
-        # get a dataframe, a single or no row dataframe, correlating to the field name
-        fld_df = country_object_instance.enrich_variables[
-            country_object_instance.enrich_variables.enrich_field_name.str.replace('_', '').str.contains(
-                fld_nm.replace('_', ''), case=False
-            )
-        ]
-
-        # if no field was found, try pattern for non-modified fields - provides pre-ArcGIS Python API 1.8.3 support
-        if len(fld_df.index) == 0:
-            fld_df = country_object_instance.enrich_variables[
-                country_object_instance.enrich_variables.enrich_field_name.str.contains(fld_nm, case=False)
-            ]
-
-        # if the field name was found, add the alias
-        if len(fld_df.index):
-            arcpy.management.AlterField(
-                in_table=feature_class,
-                field=fld_nm,
-                new_field_alias=fld_df.iloc[0]['alias']
-            )
-
-    return feature_class
-
-
 def geography_iterable_to_arcpy_geometry_list(geography_iterable: Union[pd.DataFrame, pd.Series, Geometry,
                                                                         list], geometry_filter: str = None) -> list:
     """

@@ -1,11 +1,12 @@
 """
 Functions for countries introspection and Country object providing single interface for data preparation for modeling.
 """
+from pathlib import Path
 import re
 from typing import Union, AnyStr, Tuple
 
 from arcgis.gis import GIS
-from arcgis.features import GeoAccessor
+from arcgis.features import GeoAccessor, FeatureSet
 from arcgis.geometry import Geometry
 import numpy as np
 import pandas as pd
@@ -16,6 +17,7 @@ from .utils import avail_arcpy, local_vs_gis, set_source, geography_iterable_to_
 
 if avail_arcpy:
     import arcpy
+
     arcpy.env.overwriteOutput = True
 
 
@@ -207,6 +209,7 @@ class Country:
         e_df = bg_df.mdl.enrich(key_vars)
 
     """
+
     def __init__(self, name: str, source: Union[str, GIS] = None, year: int = None):
 
         # set the source implicitly if necessary based on what is available
@@ -243,8 +246,8 @@ class Country:
 
         # ensure the input country name is valid
         assert self.geo_name in self._cntry_df.iso3.drop_duplicates().sort_values().values, \
-               'Please choose a valid three letter country identifier (ISO3). You can get a list of valid values ' \
-               'using the "modeling.get_countries" method.'
+            'Please choose a valid three letter country identifier (ISO3). You can get a list of valid values ' \
+            'using the "modeling.get_countries" method.'
 
         # if the data source is local, but no year was provided, get the year
         if self.source == 'local' and self.year is None:
@@ -261,7 +264,7 @@ class Country:
             self._geo_id = self._cntry_df[
                 (self._cntry_df['iso3'] == self.geo_name)
                 & (self._cntry_df['vintage'] == self.year)
-            ].iloc[0]['country_id']
+                ].iloc[0]['country_id']
 
         # set the iso2 property
         self.iso2 = self._cntry_df[self._cntry_df.iso3 == self.geo_name].iloc[0]['iso2']
@@ -344,6 +347,59 @@ class Country:
 
         return mstr_df
 
+    def add_enrich_aliases(self, feature_class: (Path, str)) -> Path:
+        """Add human readable aliases to an enriched feature class.
+
+        Args:
+            feature_class: Path | str
+                Path to the enriched feature class.
+
+        Returns: Path
+            Path to feature class with aliases added.
+        """
+        # make sure arcpy is available because we need it
+        assert avail_arcpy, 'add_enrich_aliases requires arcpy to be available since working with ArcGIS Feature ' \
+                            'Classes'
+
+        # since arcpy tools cannot handle Path objects, convert to string
+        feature_class = str(feature_class) if isinstance(feature_class, Path) else feature_class
+
+        # if, at this point, the path is not a string, something is wrong
+        if not isinstance(feature_class, str):
+            raise Exception(f'The feature_class must be either a Path or string, not {type(feature_class)}.')
+
+        # start by getting a list of all the field names
+        fld_lst = [f.name for f in arcpy.ListFields(feature_class)]
+
+        # iterate through the field names and if the field is an enrich field, add the alias
+        for fld_nm in fld_lst:
+
+            # pop out the dataframe of enrich variables for readability
+            e_var = self.enrich_variables
+
+            # pull out the enrich field name series since we're going to use it a lot
+            e_nm = e_var.enrich_field_name
+
+            # get a dataframe, a single or no row dataframe, correlating to the field name
+            fld_df = e_var[e_nm.str.replace('_', '').str.contains(fld_nm.replace('_', ''), case=False)]
+
+            # if no field was found, try pattern for non-modified fields - provides pre-ArcGIS Python API 1.8.3 support
+            if len(fld_df.index) == 0:
+                fld_df = e_var[e_nm.str.contains(fld_nm, case=False)]
+
+            # if the field name was found, add the alias
+            if len(fld_df.index):
+                arcpy.management.AlterField(
+                    in_table=feature_class,
+                    field=fld_nm,
+                    new_field_alias=fld_df.iloc[0]['alias']
+                )
+
+        # convert path back to string for output
+        feature_class = Path(feature_class)
+
+        return feature_class
+
     def verify_can_enrich(self):
         """If the country enrich instance can enrich based on the permissions. Only relevant if source is a GIS
         instance."""
@@ -404,7 +460,7 @@ class Country:
             self._geography_levels = pd.DataFrame(geog['hierarchies'][0]['levels'])
 
             # create the geo_name to use for identifying the levels
-            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().str.replace(' ', '_').\
+            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().str.replace(' ', '_'). \
                 str.replace('(', '').str.replace(')', '')
 
             # reverse the sorting so the smallest is at the top
@@ -569,6 +625,25 @@ class GeographyLevel:
     def __repr__(self):
         return f'<class: GeographyLevel - {self.geo_name}>'
 
+    @staticmethod
+    def _format_get_selectors(selector: Union[str, int, list, tuple]) -> Union[str, list]:
+        """Helper to format get selectors"""
+        if isinstance(selector, (list, tuple)):
+
+            # make sure all values are strings
+            if isinstance(selector[0], int):
+                selector = [str(v) for v in selector]
+
+            # ensure if digits, are left padded with zeros
+            if all(v.isdecimal() for v in selector):
+                max_len = max(len(v) for v in selector)
+                selector = [v.zfill(max_len) for v in selector]
+
+        elif isinstance(selector, int):
+            selector = str(selector)
+
+        return selector
+
     def _standardize_geographic_level_input(self, geo_in: Union[str, int]) -> str:
         """Helper function to check and standardize named input or integers to geographic heirarchial levels."""
 
@@ -595,18 +670,21 @@ class GeographyLevel:
     @property
     def resource(self):
         """The resource, either a layer or Feature Layer, for accessing the data for the geographic layer."""
+        # get the geography levels dataframe to work with
+        lvl_df = self._cntry.geography_levels
+
+        # get the feature class path if local
         if self._resource is None and self._cntry.source == 'local':
-            self._resource = self._cntry.geography_levels[self._cntry.geography_levels['geo_name'] == self.geo_name].iloc[0][
-                'feature_class_path']
+            self._resource = lvl_df[lvl_df['geo_name'] == self.geo_name].iloc[0]['feature_class_path']
 
         elif self._resource is None and isinstance(self._cntry.source, GIS):
-            raise Exception('Using a GIS instance not yet implemented.')
+            self._resource = lvl_df[lvl_df['geo_name'] == self.geo_name].iloc[0]['id']
 
         return self._resource
 
     @local_vs_gis
-    def get(self, geography: (str, int), selector: str = None, selection_field: str = 'NAME',
-            query_string: str = None, return_geometry: bool = False) -> pd.DataFrame:
+    def get(self, selector: str = None, selection_field: str = 'NAME',
+            query_string: str = None, return_geometry: bool = True) -> pd.DataFrame:
         """ Get a DataFrame at an available geography_level level. Since frequently
         working within an area of interest defined by a higher level of
         geography_level, typically a CBSA or DMA, the ability to specify this
@@ -614,8 +692,6 @@ class GeographyLevel:
         up the process of creating the output.
 
         Args:
-            geography: Either the geographic_level or the index of the geography_level
-                level. This can be discovered using the Country.geography_levels method.
             selector: If a specific value can be identified using a string, even if
                 just part of the field value, you can insert it here.
             selection_field: This is the field to be searched for the string values
@@ -636,7 +712,7 @@ class GeographyLevel:
         pass
 
     def _get_local(self, selector: (str, list) = None, selection_field: str = 'NAME',
-                   query_string: str = None, return_geometry: bool = False) -> pd.DataFrame:
+                   query_string: str = None, return_geometry: bool = True) -> pd.DataFrame:
 
         # if not returning the geometry, use a search cursor - MUCH faster
         if not return_geometry:
@@ -644,19 +720,87 @@ class GeographyLevel:
             # create or use the input query parameters
             sql = self._get_sql_helper(selector, selection_field, query_string)
 
-            # create an output series of names filtered using the query
-            out_srs = pd.Series(
-                r[0] for r in arcpy.da.SearchCursor(self.resource, field_names='NAME', where_clause=sql))
-            out_srs.name = 'geo_name'
+            # create an output dataframe of names filtered using the query
+            col_nms = ['ID', 'NAME']
+            val_lst = (r for r in arcpy.da.SearchCursor(self.resource, field_names=col_nms, where_clause=sql))
+            out_df = pd.DataFrame(val_lst, columns=col_nms)
 
-            # convert the series to a dataframe for consistency
-            out_df = out_srs.to_frame()
-
-        # otherwise, got the SeDF route
+        # otherwise, go the SeDF route
         else:
             out_df = self._get_local_df(selector, selection_field, query_string, self._parent_data)
 
         return out_df
+
+    def _get_gis(self, selector: (str, list) = None, selection_field: str = 'NAME',
+                 query_string: str = None, return_geometry: bool = True) -> pd.DataFrame:
+        """Web GIS implementation of 'get'."""
+
+        # TODO: build ability to use selection_field and query_string parameters with Web GIS
+        assert selection_field == 'NAME' and query_string is None, 'Neither the "selection_field" nor "query_string" ' \
+                                                                   'parameters are implemented to be used with a Web ' \
+                                                                   'GIS.'
+
+        # start building the payload to send with the request
+        params = {
+            'f': 'json',
+            'returnGeometry': return_geometry,
+            'outsr': 4326
+        }
+
+        # format the selector - ensure everything strings or list of strings
+        selector = self._format_get_selectors(selector)
+
+        # if there is a parent standard geography
+        if self._parent_data is not None:
+            params['geographyIDs'] = self._parent_data.attrs['parent_geo']['id']
+            params['geographyLayers'] = self._parent_data.attrs['parent_geo']['resource']
+            params['returnsubgeographylayer'] = True
+            params['subgeographylayer'] = self.resource
+            params['subgeographyquery'] = selector
+
+        # otherwise, if a fresh query (freshie!)
+        else:
+            params['geographyLayers'] = self.resource
+
+            # determine what type of selector is being passed in, and set the correct request parameter
+            if isinstance(selector, str):
+                params['geographyQuery'] = selector
+            elif all(v.isdigit() for v in selector):
+                params['geographyIDs'] = selector
+
+        # make the request using the gis connection to handle authentication
+        r_json = self.source._con.post(
+            f'{self.source.properties.helperServices("geoenrichment").url}/StandardGeographyQuery',
+            params=params
+        )
+
+        # handle any errors returned
+        if 'error' in r_json:
+            err = r_json['error']
+            raise Exception(f'Error in retrieving geographies from Business Analyst StandardGeographyQuery REST '
+                            f'endpoint. Error Code {err["code"]}: {err["message"]}')
+
+        else:
+            # unpack the feature set from the response and convert it to a SeDF
+            df = FeatureSet.from_dict(r_json['results'][0]['value']).sdf
+
+            assert len(df.index), 'Your selection did not return any results. No records were returned.'
+
+            # clean up the schema for consistency
+            if return_geometry:
+                df = df[['AreaID', 'AreaName', 'SHAPE']].copy()
+                df.columns = ['ID', 'NAME', 'SHAPE']
+                df.spatial.set_geometry('SHAPE')
+            else:
+                df = df[['AreaID', 'AreaName']].copy()
+                df.columns = ['ID', 'NAME']
+
+            # tack on the country and geographic level name for potential use later
+            df.attrs['_cntry'] = self._cntry
+            df.attrs['geo_name'] = self.geo_name
+            df.attrs['parent_geo'] = {'resource': self.resource, 'id': list(df['ID'])}
+
+        return df
 
     @local_vs_gis
     def within(self, selecting_geography: (pd.DataFrame, Geometry, list)) -> pd.DataFrame:
