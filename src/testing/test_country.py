@@ -203,3 +203,10 @@ def test_enrich_keycy_local(local_usa):
 
 def test_enrich_keycy_ent(ent_usa):
     enrich_keycy_test(ent_usa)
+
+
+def test_enrich_keycy_ent_batch(ent_usa):
+    kv = get_key_cy_vars(ent_usa)
+    cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
+    enrch_df = cnty_df.mdl.enrich(kv)
+    assert isinstance(enrch_df, pd.DataFrame)

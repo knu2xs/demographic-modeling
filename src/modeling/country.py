@@ -1,6 +1,7 @@
 """
 Functions for countries introspection and Country object providing single interface for data preparation for modeling.
 """
+import math
 from pathlib import Path
 import re
 from typing import Union, AnyStr, Tuple
@@ -567,8 +568,8 @@ class Country:
         # if the enrich dataframe is passed in, check to make sure it has what we need, the right columns
         if isinstance(enrich_variables, pd.DataFrame):
             assert enrich_str_col in enrich_variables.columns, f'It appears the dataframe used for enrichment does' \
-                                                              f' not have the column with enrich string names ' \
-                                                              f'({enrich_str_col}).'
+                                                               f' not have the column with enrich string names ' \
+                                                               f'({enrich_str_col}).'
             assert enrich_nm_col in enrich_variables.columns, f'It appears the dataframe used for enrichment does ' \
                                                               f'not have the column with the enrich variables names ' \
                                                               f'({enrich_nm_col}).'
@@ -614,9 +615,9 @@ class Country:
 
         # note any variables submitted, but not found
         if len(enrich_variables) > len(enrich_vars_df.index):
-            missing_count =  len(enrich_variables) - len(enrich_vars_df.index)
+            missing_count = len(enrich_variables) - len(enrich_vars_df.index)
             warn('Some of the variables provided are not available for enrichment '
-                          f'(missing count: {missing_count:,}).', UserWarning)
+                 f'(missing count: {missing_count:,}).', UserWarning)
 
         # check to make sure there are variables for enrichment
         if len(enrich_vars_df.index) == 0:
@@ -683,58 +684,82 @@ class Country:
         """Implementation of enrich for analysis using Web GIS."""
         evars = self._enrich_variable_preprocessing(enrich_variables)
 
+        # get the maximum batch size less one just for good measure
+        res = self.source._con.get(
+            f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/ServiceLimits')
+        batch_size = [v['value'] for v in res['serviceLimits']['value'] if v['paramName'] == 'maxRecordCount'][0]
+
         # initialize the params for the REST call
         params = {
             'f': 'json',
-            'analysisVariables': list(evars),
+            'analysisVariables' : list(evars),
             'returnGeometry': False  # because we already have the geometry
         }
 
-        # if working with data derived from standard geographies
-        if 'parent_geo' in data.attrs:
-            params['studyAreas'] = [{
-                "sourceCountry": data.attrs['parent_geo']['resource'].split('.')[0],
-                "layer": data.attrs['parent_geo']['resource'],
-                "ids": data.attrs['parent_geo']['id']
-            }]
+        # dataframe to store results
+        out_df_lst = []
 
-        # if not standard geographies, working with geometries
-        else:
+        # use the count of features and the max batch size to iteratively enrich the input data
+        for x in range(0, len(data.index), batch_size):
 
-            # validate the spatial property
-            assert data.spatial.validate(), 'The input data does not appear to be a valid Spatially Enabled ' \
-                                            'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
 
-            # format the features for sending - keep it light, just the geometry
-            params['studyAreas'] = data[data.spatial.name].to_frame().spatial.to_featureset().features
 
-            # get the input spatial reference
-            params['insr'] = data.spatial.sr
+            # if working with data derived from standard geographies
+            if 'parent_geo' in data.attrs:
 
-        # send the request to the server using post because if sending geometry, the message can be big
-        r_json = self.source._con.post(
-            f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/Enrich',
-            params=params)
+                # peel off just the id's for this batch
+                id_lst = data.attrs['parent_geo']['id'][x:x + batch_size]
 
-        # ensure a valid result is received
-        if 'error' in r_json:
-            err = r_json['error']
-            raise Exception(f'Error in enriching data using Business Analyst Enrich REST endpoint. Error Code '
-                            f'{err["code"]}: {err["message"]}')
+                params['studyAreas'] = [{
+                    "sourceCountry": data.attrs['parent_geo']['resource'].split('.')[0],
+                    "layer": data.attrs['parent_geo']['resource'],
+                    "ids": id_lst
+                }]
 
-        # unpack the enriched results - reaching into the FeatureSet for just the attributes since not getting geometry
-        r_df = pd.DataFrame([f['attributes'] for f in r_json['results'][0]['value']['FeatureSet'][0]['features']])
+            # if not standard geographies, working with geometries
+            else:
 
-        # get just the columns with the enrich data requested
-        evar_mstr = self.enrich_variables
-        evars_df = evar_mstr[[n in evars.str.lower().values for n in evar_mstr['enrich_name'].str.lower()]]
-        e_col_lst = [n for n in r_df.columns if n in evars_df['name'].values]
+                # validate the spatial property
+                assert data.spatial.validate(), 'The input data does not appear to be a valid Spatially Enabled ' \
+                                                'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
 
-        # filter the response dataframe to just enrich columns
-        e_df = r_df[e_col_lst]
+                # get a slice of the input data to enrich for this bitch
+                in_batch_df = data.loc[x:x + batch_size]
+
+                # format the features for sending - keep it light, just the geometry
+                params['studyAreas'] = in_batch_df[in_batch_df.spatial.name].to_frame().spatial.to_featureset().features
+
+                # get the input spatial reference
+                params['insr'] = data.spatial.sr
+
+            # send the request to the server using post because if sending geometry, the message can be big
+            r_json = self.source._con.post(
+                f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/Enrich',
+                params=params)
+
+            # ensure a valid result is received
+            if 'error' in r_json:
+                err = r_json['error']
+                raise Exception(f'Error in enriching data using Business Analyst Enrich REST endpoint. Error Code '
+                                f'{err["code"]}: {err["message"]}')
+
+            # unpack the enriched results - reaching into the FeatureSet for just the attributes
+            r_df = pd.DataFrame([f['attributes'] for f in r_json['results'][0]['value']['FeatureSet'][0]['features']])
+
+            # get just the columns with the enrich data requested
+            evar_mstr = self.enrich_variables
+            evars_df = evar_mstr[[n in evars.str.lower().values for n in evar_mstr['enrich_name'].str.lower()]]
+            e_col_lst = [n for n in r_df.columns if n in evars_df['name'].values]
+
+            # filter the response dataframe to just enrich columns
+            e_df = r_df[e_col_lst]
+
+            # add the dataframe to the list
+            out_df_lst.append(e_df)
 
         # add the enrich data onto the original data
-        out_df = pd.concat([data, e_df], axis=1, sort=False)
+        enrich_df = pd.concat(out_df_lst).reset_index(drop=True)
+        out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 
         # shuffle columns so geometry is at the end
         out_df = out_df[[c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']]
