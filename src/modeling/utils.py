@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import AnyStr, Union
 
 from arcgis.env import active_gis
+from arcgis.features import GeoAccessor
 from arcgis.gis import GIS, User
 from arcgis.geometry import Geometry
 import pandas as pd
@@ -256,3 +257,29 @@ def geography_iterable_to_arcpy_geometry_list(geography_iterable: Union[pd.DataF
     arcpy_lst = [geom.as_arcpy for geom in geom_lst]
 
     return arcpy_lst
+
+
+def get_sanitized_names(names: Union[str, list, tuple, pd.Series]) -> pd.Series:
+    """
+    Sanitize the column names using the GeoAccessor.sanitize_column_names function.
+    Useful when trying to match up column names from previously enriched data.
+
+    .. note::
+        This process is, especially with long lists, painfully slow, so only use
+        if absolutely necessary.
+
+    Args:
+        names: Iterable (list, tuple, pd.Series) of names to be "sanitized"
+
+    Returns:
+        pd.Series of column names
+    """
+    # if just one name was passed in, make it an iterable
+    names = [names] if isinstance(names, str) else names
+
+    # sanititze the column names on a dummy dataframe created to get access to the function
+    nm_df = pd.DataFrame(columns=names)
+    nm_df = nm_df.spatial.sanitize_column_names()
+    sani_names = pd.Series(nm_df.columns)
+
+    return sani_names

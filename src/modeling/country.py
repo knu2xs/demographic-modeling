@@ -4,6 +4,7 @@ Functions for countries introspection and Country object providing single interf
 from pathlib import Path
 import re
 from typing import Union, AnyStr, Tuple
+from warnings import warn
 
 from arcgis.gis import GIS
 from arcgis.features import GeoAccessor, FeatureSet
@@ -13,7 +14,7 @@ import pandas as pd
 
 from ._xml_interrogation import get_heirarchial_geography_dataframe  # need this to be added to arcpy._ba
 from .utils import avail_arcpy, local_vs_gis, set_source, geography_iterable_to_arcpy_geometry_list, can_enrich_gis, \
-    has_networkanalysis_gis
+    has_networkanalysis_gis, get_sanitized_names
 
 if avail_arcpy:
     import arcpy
@@ -545,36 +546,84 @@ class Country:
         """
         pass
 
-    def _enrich_variable_preprocessing(self, enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame]):
+    def _enrich_variable_preprocessing(self, enrich_variables: Union[list, tuple, np.array, pd.Series, pd.DataFrame]):
         """Provide flexibility for enrich variable preprocessing."""
         # enrich variable dataframe column name
-        enrch_str_col = 'enrich_name'
+        enrich_str_col = 'enrich_name'
         enrich_nm_col = 'name'
+        enrich_nmpro_col = 'enrich_field_name'
+        col_nm_san = 'nm_san'
+        col_pronm_san = 'nmpro_san'
+        col_estr_san = 'estr_san'
 
-        # TODO: handle name or enrich_name
-        # TODO: drop duplicate names
+        # if just a single variable is provided pipe it into a pandas series
+        if isinstance(enrich_variables, str):
+            enrich_variables = pd.Series([enrich_variables])
 
-        # if just a single variable is provided pipe it into a list
-        enrich_variables = [enrich_variables] if isinstance(enrich_variables, str) else enrich_variables
+        # toss the variables into a pandas Series if an iterable was passed in
+        elif isinstance(enrich_variables, (list, tuple, np.ndarray)):
+            enrich_variables = pd.Series(enrich_variables)
 
-        # if the enrich dataframe is passed in, recognize and work with it
+        # if the enrich dataframe is passed in, check to make sure it has what we need, the right columns
         if isinstance(enrich_variables, pd.DataFrame):
-            if enrch_str_col in enrich_variables.columns:
-                enrich_variables = enrich_variables[enrch_str_col]
-            else:
-                raise Exception(f'It appears the dataframe used for enrichment does not have the column with enrich '
-                                f'string names ({enrch_str_col}).')
+            assert enrich_str_col in enrich_variables.columns, f'It appears the dataframe used for enrichment does' \
+                                                              f' not have the column with enrich string names ' \
+                                                              f'({enrich_str_col}).'
+            assert enrich_nm_col in enrich_variables.columns, f'It appears the dataframe used for enrichment does ' \
+                                                              f'not have the column with the enrich variables names ' \
+                                                              f'({enrich_nm_col}).'
+            enrich_vars_df = enrich_variables
 
-        # ensure all the enrich variables are available
-        enrich_vars = pd.Series(enrich_variables)
-        missing_vars = enrich_vars[~enrich_vars.isin(self.enrich_variables[enrch_str_col])]
-        if len(missing_vars):
-            raise Exception('Some of the variables you provided are not available for enrichment '
-                            f'[{", ".join(missing_vars)}]')
+        # otherwise, create a enrich variables dataframe from the enrich series for a few more checks
+        else:
+
+            # get shorter version of variable name to work with and also one to modify if necessary
+            ev_df = self.enrich_variables
+
+            # get a series of submitted enrich varialbes all lowercase to account for case variations
+            ev_lower = enrich_variables.str.lower()
+
+            # default to trying to find enrich variables using the enrich string values
+            enrich_vars_df = ev_df[ev_df[enrich_str_col].str.lower().isin(ev_lower)]
+
+            # if nothing was returned, try using just the variable names (common if using previously enriched data)
+            if len(enrich_vars_df.index) == 0:
+                enrich_vars_df = ev_df[ev_df[enrich_nm_col].str.lower().isin(ev_lower)]
+
+            # the possibly may exist where names are from columns in data enriched using local enrichment in Pro
+            if len(enrich_vars_df.index) == 0:
+                enrich_vars_df = ev_df[ev_df[enrich_nmpro_col].str.lower().isin(ev_lower)]
+
+            # try to find enrich variables using the enrich string values sanitized (common if exporting from SeDF)
+            if len(enrich_vars_df.index) == 0:
+                ev_df[col_estr_san] = get_sanitized_names(ev_df[enrich_str_col])
+                enrich_vars_df = ev_df[ev_df[col_estr_san].str.lower().isin(ev_lower)]
+
+            # try columns in data enriched using local enrichment in Pro and sanitized (common if exporting from SeDF)
+            if len(enrich_vars_df.index) == 0:
+                ev_df[col_pronm_san] = get_sanitized_names(enrich_nmpro_col)
+                enrich_vars_df = ev_df[ev_df[col_pronm_san].isin(ev_lower)]
+
+            # if nothing was returned, try using just the variable names possibly sanitized (anticipate this to be rare)
+            if len(enrich_vars_df.index) == 0:
+                ev_df[col_nm_san] = get_sanitized_names(ev_df[enrich_nm_col])
+                enrich_vars_df = ev_df[ev_df[col_nm_san].str.lower().isin(ev_lower)]
+
+        # now, drop any duplicates so we're not getting the same variable twice from different data collections
+        enrich_vars_df.drop_duplicates('name', inplace=True)
+
+        # note any variables submitted, but not found
+        if len(enrich_variables) > len(enrich_vars_df.index):
+            missing_count =  len(enrich_variables) - len(enrich_vars_df.index)
+            warn('Some of the variables provided are not available for enrichment '
+                          f'(missing count: {missing_count:,}).', UserWarning)
 
         # check to make sure there are variables for enrichment
-        if len(enrich_variables) == 0:
-            raise Exception('There appear to be no variables being selected for enrichment.')
+        if len(enrich_vars_df.index) == 0:
+            raise Exception('There appear to be no variables selected for enrichment.')
+
+        # get a list of the variables for enrichment
+        enrich_variables = enrich_vars_df[enrich_str_col].reset_index()[enrich_str_col]
 
         return enrich_variables
 

@@ -3,6 +3,7 @@ arcgis.country tests
 """
 import sys
 from pathlib import Path
+from typing import Union
 
 dir_src = Path(__file__).parent.parent.parent / 'src'
 assert dir_src.exists()
@@ -31,19 +32,20 @@ def ent_usa(ent_gis):
 
 
 # get countries
-def test_get_countries_local():
-    cntry_df = get_countries('local')
+def get_countries_test(dm_source: Union[str, Country]):
+    cntry_df = get_countries(dm_source)
     assert isinstance(cntry_df, pd.DataFrame)
+
+def test_get_countries_local():
+    get_countries_test('local')
 
 
 def test_get_countries_agol(agol_gis):
-    cntry_df = get_countries(agol_gis)
-    assert isinstance(cntry_df, pd.DataFrame)
+    get_countries_test(agol_gis)
 
 
 def test_get_countries_ent(ent_gis):
-    cntry_df = get_countries(ent_gis)
-    assert isinstance(cntry_df, pd.DataFrame)
+    get_countries_test(ent_gis)
 
 
 # create country
@@ -131,6 +133,51 @@ def test_get_subgeo_agol(agol_usa):
 
 def test_get_subgeo_ent(ent_usa):
     get_subgeo_test(ent_usa)
+
+
+# enrich variable preprocessing
+@pytest.fixture
+def enrich_vars_df(local_usa: Country):
+    ev = local_usa.enrich_variables
+    kv = ev[
+        (ev.data_collection.str.lower().str.contains('key'))  # get the key variables
+        & (ev.name.str.endswith('CY'))  # just current year (2019) variables
+        ].reset_index(drop=True)
+    return kv
+
+
+def test_enrich_variable_preprocessing_name_list(local_usa, enrich_vars_df):
+    name_lst = list(enrich_vars_df['name'])
+    in_len = len(name_lst)
+    enrich_vars = local_usa._enrich_variable_preprocessing(name_lst)
+    assert isinstance(enrich_vars, pd.Series)
+    assert len(enrich_vars.index) == in_len
+
+
+def test_enrich_variable_preprocessing_name_list_extra_var(local_usa, enrich_vars_df):
+    name_lst = list(enrich_vars_df['name'])
+    in_len = len(name_lst)
+    name_lst.append('whack_a_mole')
+    with pytest.warns(UserWarning):
+        enrich_vars = local_usa._enrich_variable_preprocessing(name_lst)
+        assert isinstance(enrich_vars, pd.Series)
+        assert len(enrich_vars.index) == in_len
+
+
+def test_enrich_variable_preprocessing_proname_nparray(local_usa, enrich_vars_df):
+    proname_arr = enrich_vars_df['enrich_name'].values
+    in_len = len(proname_arr)
+    enrich_vars = local_usa._enrich_variable_preprocessing(proname_arr)
+    assert isinstance(enrich_vars, pd.Series)
+    assert len(enrich_vars.index) == in_len
+
+
+def test_enrich_variable_preprocessing_fieldname_series(local_usa, enrich_vars_df):
+    fldnm_srs = enrich_vars_df['enrich_field_name']
+    in_len = len(fldnm_srs)
+    enrich_vars = local_usa._enrich_variable_preprocessing(fldnm_srs)
+    assert isinstance(enrich_vars, pd.Series)
+    assert len(enrich_vars.index) == in_len
 
 
 # enrich
