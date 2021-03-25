@@ -460,8 +460,8 @@ class Country:
             self._geography_levels = pd.DataFrame(geog['hierarchies'][0]['levels'])
 
             # create the geo_name to use for identifying the levels
-            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().str.replace(' ', '_'). \
-                str.replace('(', '').str.replace(')', '')
+            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().\
+                str.replace(' ', '_', regex=False).str.replace('(', '', regex=False).str.replace(')', '', regex=False)
 
             # reverse the sorting so the smallest is at the top
             self._geography_levels = self._geography_levels.iloc[::-1].reset_index(drop=True)
@@ -547,15 +547,82 @@ class Country:
         """
         pass
 
-    def _enrich_variable_preprocessing(self, enrich_variables: Union[list, tuple, np.array, pd.Series, pd.DataFrame]):
+    def get_enrich_variables_dataframe_from_variable_list(self,
+                                                          enrich_variables: Union[list, tuple, np.ndarray, pd.Series],
+                                                          drop_duplicates=True) -> pd.DataFrame:
+        """Get a dataframe of enrich variables associated with the list of variables
+        passed in. This is especially useful when needing aliases (*human readable
+        names*), or are interested in enriching more data using previously enriched
+        data as a template.
+
+        Args:
+            enrich_variables: Iterable (normally a list) of variables correlating to
+                enrichment variables. These variable names can be simply the name, the
+                name prefixed by the collection separated by a dot, or the output from
+                enrichment in ArcGIS Pro with the field name modified to fit field naming
+                and length constraints.
+            drop_duplicates: Optional boolean (default True) indicating whether to drop
+                duplicates. Since the same variables appear in multiple data collections,
+                multiple instances of the same variable can be found. Dropping duplicates
+                removes redundant matches.
+
+        Returns:
+            Pandas DataFrame of enrich variables with the different available aliases.
+        """
+        # enrich variable dataframe column names
+        enrich_nm_col, enrich_nmpro_col, enrich_str_col ='name', 'enrich_field_name', 'enrich_name'
+        col_nm_san, col_pronm_san, col_estr_san = 'nm_san', 'nmpro_san', 'estr_san'
+
+        # get shorter version of variable name to work with and also one to modify if necessary
+        ev_df = self.enrich_variables
+
+        # get a series of submitted enrich varialbes all lowercase to account for case variations
+        ev_lower = enrich_variables.str.lower()
+
+        # default to trying to find enrich variables using the enrich string values
+        enrich_vars_df = ev_df[ev_df[enrich_str_col].str.lower().isin(ev_lower)]
+
+        # if nothing was returned, try using just the variable names (common if using previously enriched data)
+        if len(enrich_vars_df.index) == 0:
+            enrich_vars_df = ev_df[ev_df[enrich_nm_col].str.lower().isin(ev_lower)]
+
+        # the possibly may exist where names are from columns in data enriched using local enrichment in Pro
+        if len(enrich_vars_df.index) == 0:
+            enrich_vars_df = ev_df[ev_df[enrich_nmpro_col].str.lower().isin(ev_lower)]
+
+        # try to find enrich variables using the enrich string values sanitized (common if exporting from SeDF)
+        if len(enrich_vars_df.index) == 0:
+            ev_df[col_estr_san] = get_sanitized_names(ev_df[enrich_str_col])
+            enrich_vars_df = ev_df[ev_df[col_estr_san].str.lower().isin(ev_lower)]
+
+        # try columns in data enriched using local enrichment in Pro and sanitized (common if exporting from SeDF)
+        if len(enrich_vars_df.index) == 0:
+            ev_df[col_pronm_san] = get_sanitized_names(enrich_nmpro_col)
+            enrich_vars_df = ev_df[ev_df[col_pronm_san].isin(ev_lower)]
+
+        # if nothing was returned, try using just the variable names possibly sanitized (anticipate this to be rare)
+        if len(enrich_vars_df.index) == 0:
+            ev_df[col_nm_san] = get_sanitized_names(ev_df[enrich_nm_col])
+            enrich_vars_df = ev_df[ev_df[col_nm_san].str.lower().isin(ev_lower)]
+
+        # make sure something was found, but don't break the runtime
+        if len(enrich_vars_df) == 0:
+            warn(f'It appears none of the input enrich variables were found in the {self.source} country.', UserWarning)
+
+        # if drop_duplicates, drop on variable name column to remove redundant matches
+        if drop_duplicates:
+            enrich_vars_df = enrich_vars_df.drop_duplicates(enrich_nm_col)
+
+        # clean up the index
+        enrich_vars_df.reset_index(inplace=True, drop=True)
+
+        return enrich_vars_df
+
+    def _enrich_variable_preprocessing(self, enrich_variables: Union[list, tuple, np.ndarray, pd.Series, pd.DataFrame]):
         """Provide flexibility for enrich variable preprocessing."""
         # enrich variable dataframe column name
         enrich_str_col = 'enrich_name'
         enrich_nm_col = 'name'
-        enrich_nmpro_col = 'enrich_field_name'
-        col_nm_san = 'nm_san'
-        col_pronm_san = 'nmpro_san'
-        col_estr_san = 'estr_san'
 
         # if just a single variable is provided pipe it into a pandas series
         if isinstance(enrich_variables, str):
@@ -578,37 +645,8 @@ class Country:
         # otherwise, create a enrich variables dataframe from the enrich series for a few more checks
         else:
 
-            # get shorter version of variable name to work with and also one to modify if necessary
-            ev_df = self.enrich_variables
-
-            # get a series of submitted enrich varialbes all lowercase to account for case variations
-            ev_lower = enrich_variables.str.lower()
-
-            # default to trying to find enrich variables using the enrich string values
-            enrich_vars_df = ev_df[ev_df[enrich_str_col].str.lower().isin(ev_lower)]
-
-            # if nothing was returned, try using just the variable names (common if using previously enriched data)
-            if len(enrich_vars_df.index) == 0:
-                enrich_vars_df = ev_df[ev_df[enrich_nm_col].str.lower().isin(ev_lower)]
-
-            # the possibly may exist where names are from columns in data enriched using local enrichment in Pro
-            if len(enrich_vars_df.index) == 0:
-                enrich_vars_df = ev_df[ev_df[enrich_nmpro_col].str.lower().isin(ev_lower)]
-
-            # try to find enrich variables using the enrich string values sanitized (common if exporting from SeDF)
-            if len(enrich_vars_df.index) == 0:
-                ev_df[col_estr_san] = get_sanitized_names(ev_df[enrich_str_col])
-                enrich_vars_df = ev_df[ev_df[col_estr_san].str.lower().isin(ev_lower)]
-
-            # try columns in data enriched using local enrichment in Pro and sanitized (common if exporting from SeDF)
-            if len(enrich_vars_df.index) == 0:
-                ev_df[col_pronm_san] = get_sanitized_names(enrich_nmpro_col)
-                enrich_vars_df = ev_df[ev_df[col_pronm_san].isin(ev_lower)]
-
-            # if nothing was returned, try using just the variable names possibly sanitized (anticipate this to be rare)
-            if len(enrich_vars_df.index) == 0:
-                ev_df[col_nm_san] = get_sanitized_names(ev_df[enrich_nm_col])
-                enrich_vars_df = ev_df[ev_df[col_nm_san].str.lower().isin(ev_lower)]
+            # get the enrich variables dataframe
+            enrich_vars_df = self.get_enrich_variables_dataframe_from_variable_list(enrich_variables)
 
         # now, drop any duplicates so we're not getting the same variable twice from different data collections
         enrich_vars_df.drop_duplicates('name', inplace=True)
@@ -692,7 +730,7 @@ class Country:
         # initialize the params for the REST call
         params = {
             'f': 'json',
-            'analysisVariables' : list(evars),
+            'analysisVariables': list(evars),
             'returnGeometry': False  # because we already have the geometry
         }
 
@@ -701,8 +739,6 @@ class Country:
 
         # use the count of features and the max batch size to iteratively enrich the input data
         for x in range(0, len(data.index), batch_size):
-
-
 
             # if working with data derived from standard geographies
             if 'parent_geo' in data.attrs:
