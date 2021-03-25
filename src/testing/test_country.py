@@ -135,6 +135,24 @@ def test_get_subgeo_ent(ent_usa):
     get_subgeo_test(ent_usa)
 
 
+def get_subgeo_levels_test(ba_src: Country):
+    bg_df = ba_src.cbsas.get('seattle').mdl.level(0).get()
+    assert isinstance(bg_df, pd.DataFrame)
+    assert len(bg_df.index) == 2480
+
+
+def test_get_subgeo_levels_local(local_usa):
+    get_subgeo_levels_test(local_usa)
+
+
+def test_get_subgeo_levels_agol(agol_usa):
+    get_subgeo_levels_test(agol_usa)
+
+
+def test_get_subgeo_levels_ent(ent_usa):
+    get_subgeo_levels_test(ent_usa)
+
+
 # enrich variable preprocessing
 @pytest.fixture
 def enrich_vars_df(local_usa: Country):
