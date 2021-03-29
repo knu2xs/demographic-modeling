@@ -1,17 +1,180 @@
-from arcgis.geometry import Geometry
+from typing import Union
+from warnings import warn
+
+from arcgis.gis import GIS
+from arcgis.features import GeoAccessor, FeatureSet
+from arcgis.geometry import Geometry, SpatialReference
 import pandas as pd
+import numpy as np
 
-from arcgis.features import GeoAccessor
-
-from .utils import avail_arcpy, local_vs_gis, geography_iterable_to_arcpy_geometry_list
-from ._xml_interrogation import get_business_points_data_path
+from .utils import avail_arcpy, local_vs_gis, geography_iterable_to_arcpy_geometry_list, validate_spatial_reference, \
+    get_spatially_enabled_dataframe
 
 if avail_arcpy:
     import arcpy
+    from ._xml_interrogation import get_business_points_data_path
+
+
+def get_top_codes(codes: Union[pd.Series, list, tuple], threshold=0.5) -> list:
+    """Get the top category codes by only keeping those compromising 50% or greater of the records.
+
+    Args:
+        codes: Iterable, preferable a Pandas Series, of code values to filter.
+        threshold: Decimal value representing the proportion of values to use for creating
+            the list of top values.
+
+    Returns:
+        List of unique code values.
+    """
+    # check the threshold to ensure it is deicmal
+    assert 0 < threshold < 1, f'"threshold" must be a decimal value between zero and one, not {threshold}'
+
+    # ensure the input codes iterable is a Pandas Series
+    cd_srs = codes if isinstance(codes, pd.Series) else pd.Series(codes)
+
+    # get the instance count for each unique code value
+    cnt_df = cd_srs.value_counts().to_frame('cnt')
+
+    # calculate the percent each of the codes comprises of the total values as a decimal
+    cnt_df['pct'] = cnt_df.cnt.apply(lambda x: x / cnt_df.cnt.sum())
+
+    # calculate a running total of the percent for each value (running total percent)
+    cnt_df['pct_cumsum'] = cnt_df['pct'].cumsum()
+
+    # finally, get the values comprising the code values for the top threshold
+    cd_vals = list(cnt_df[(cnt_df['pct_cumsum'] < threshold) | (cnt_df['pct'] > threshold)].index)
+
+    return cd_vals
+
+
+def _preproces_code_inputs(codes):
+    """helper funtion to preprocess naics or sic codes"""
+    if isinstance(codes, (str, int)):
+        codes = [codes]
+
+    elif isinstance(codes, (pd.Series, list, tuple, np.ndarray)):
+        codes = [str(cd) if isinstance(cd, int) else cd for cd in codes]
+
+    return codes
+
+
+def get_businesses_gis(area_of_interest: pd.DataFrame, gis: GIS, search_string: str = None,
+                       code_naics: Union[str, list] = None,
+                       code_sic: Union[str, list] = None, exclude_headquarters: bool = True, country: object = None,
+                       output_spatial_reference: Union[str, int, dict, SpatialReference] = {'wkid': 4326}
+                       ) -> pd.DataFrame:
+    """Method to get business using a Web GIS object instance, so retrieving through REST. This is wrapped by methods
+    in the Business object."""
+    # list of fields to lighten the output payload
+    out_flds = ['LOCNUM', 'CONAME', 'NAICSDESC', 'NAICS', 'SIC', 'SOURCE', 'PUBPRV', 'FRNCOD', 'ISCODE', 'CITY', 'ZIP',
+                'STATE', 'HDBRCHDESC']
+
+    # begin to build up the request parameter payload
+    params = {
+        'f': 'json',
+        'returnGeometry': True,
+        'outSr': validate_spatial_reference(output_spatial_reference),
+        'fields': out_flds
+    }
+
+    # make sure a country is explicitly specified
+    if '_cntry' in area_of_interest.attrs:
+        params['sourceCountry'] = area_of_interest.attrs['_cntry'].iso2
+
+    # if a country object was explicitly passed in - easy peasy lemon squeezy
+    elif country is not None and 'iso2' in country.__dict__.keys():
+        params['sourceCountry'] = country.iso2
+
+    # if there is not a country to work with, bingo out
+    else:
+        raise Exception('Either the input dataframe must have been created using the modeling '
+                        'module to retrieve standard geographies, or a country object must be '
+                        'explicitly specified in the input parameters.')
+
+    # make sure some sort of filter is being applied
+    assert (search_string is not None) or (code_naics is not None), 'You must provide either a search string or ' \
+                                                                    'NAICS code or list of codes to search for ' \
+                                                                    'businesses.'
+
+    # ensure
+
+    # populate the rest of the search parameters
+    params['searchstring'] = search_string
+    params['businesstypefilters'] = [
+        {'Classification': 'NAICS', 'Codes': _preproces_code_inputs(code_naics)},
+        {'Classification': 'SIC', 'Codes': _preproces_code_inputs(code_sic)}
+    ]
+
+    # if the input Spatially Enabled DataFrame was created using the modeling module to get standard geographies
+    if 'parent_geo' in area_of_interest.attrs.keys():
+        params['spatialfilter'] = {
+            "Boundaries": {
+                "StdLayer": {
+                    "ID": area_of_interest.attrs['parent_geo']['resource'],
+                    "GeographyIDs": area_of_interest.attrs['parent_geo']['id']
+                }
+            }
+        }
+
+    # if just a normal spatially enabled dataframe, we can use a FeatureSet with the geometry
+    else:
+        params['spatialfilter'] = {
+            "Boundaries": {
+                "recordSet": area_of_interest.spatial.to_featureset().to_dict()
+            }
+        }
+
+    # retrieve the businesses from the REST endpoint
+    url = f'{gis.properties.helperServices.geoenrichment.url}/SelectBusinesses'
+    r_json = gis._con.post(url, params=params)
+
+    # ensure a valid result is received
+    if 'error' in r_json.keys():
+        err = r_json['error']
+        raise Exception(f'Error in searching using Business Analyst SelectBusinesses REST endpoint. Error Code '
+                        f'{err["code"]}: {err["message"]}')
+
+    else:
+
+        # plow through all the messages to see if there are any errors
+        err_msg_lst = []
+        for val in r_json['messages']:
+            if 'description' in val.keys():
+                if 'error' in val['description'].lower():
+                    err_msg_lst.append(val)
+
+        # if an error message is found
+        if len(err_msg_lst):
+            err = err_msg_lst[0]
+            raise Exception(
+                f'Server error encoutered in searching using Business Analyst SelectBusinesses REST endpoint. '
+                f'Error ID: {err["id"]}, Type: {err["type"]}, Description: {err["description"]}')
+
+    # extract the feature list out of the json response
+    feature_lst = r_json['results'][0]['value']['features']
+
+    # make sure something was found
+    if len(feature_lst) == 0:
+        warn('Although the request was valid and no errors were encountered, no businesses were found.')
+
+    # convert the features to a Spatially Enabled Pandas DataFrame
+    res_df = FeatureSet(feature_lst).sdf
+
+    # reorganize the schema a little
+    cols = [c for c in out_flds if c in res_df.columns] + ['SHAPE']
+    res_df = res_df[cols]
+
+    # if not wanting to keep headquarters, normally the case for forecasting modeling, filter them out
+    if exclude_headquarters:
+        res_df = res_df[~res_df['HDBRCHDESC'].str.lower().str.match('headquarters')].reset_index(drop=True)
+
+    # drop the headquarters or branch column since only used to filter if necessary
+    res_df.drop(columns='HDBRCHDESC', inplace=True)
+
+    return res_df
 
 
 class Business(object):
-
     """
     Just like it sounds, this is a way to search for and find
     businesses of your own brand for analysis, but more importantly
@@ -22,7 +185,7 @@ class Business(object):
 
     .. code-block::python
 
-        from dm import Country, DemographicModeling
+        from modeling import Country
 
         # start by creating a country object instance
         usa = Country('USA', source='local')
@@ -79,20 +242,44 @@ class Business(object):
 
         return out_df
 
-    @staticmethod
-    def _add_std_cols(biz_df: pd.DataFrame, id_col: str, name_col: str, local_threshold: int = 0) -> pd.DataFrame:
+    def _add_std_cols(self, biz_df: pd.DataFrame, id_col: str, name_col: str, local_threshold: int = 0) -> pd.DataFrame:
         """Helper function adding values in a standard column making follow on analysis workflows easier."""
         # assign the location id and brand name to standardized columns
         biz_df['id'] = biz_df[id_col]
         biz_df['brand_name'] = biz_df[name_col]
 
-        # assign brand name category, identifying local brands based on the count of stores
-        local_srs = biz_df.brand_name.value_counts() > local_threshold
-        brand_names = local_srs[local_srs == True].index.values
-        biz_df['brand_name_category'] = biz_df.brand_name.apply(
-            lambda val: val if val in brand_names else 'local_brand')
+        # calculate the brand name category column
+        biz_df = self.calculate_brand_name_category(biz_df, local_threshold)
 
         return biz_df
+
+    @staticmethod
+    def calculate_brand_name_category(business_dataframe: pd.DataFrame, local_threshold: int = 0) -> pd.DataFrame:
+        """
+        For the output of any Business.get* function, calculate a column named 'brand_name_category'. This function is
+        frequently used to re-calculate the category identifying unique local retailers, and group them collectively
+        into a 'local_brand'. This is useful in markets where there is a distinct preference for local retailers. This
+        is particularly true for speciality coffee shops in many urban markets. While this is performed
+        automatically for the 'get_by_code' and 'get_competitors' methods, this function enables you to recalculate it
+        if you need to massage some of the brand name outputs.
+
+        Args:
+            business_dataframe: Pandas Spatially Enabled DataFrame output from one of the Business.get* functions.
+            local_threshold: Integer count below which a brand name will be consider a local brand.
+
+        Returns:
+            Pandas Spatially Enabled DataFrame of store locations with the updated column.
+        """
+        assert 'brand_name' in business_dataframe.columns, 'The "brand_name" column was not found in the input. ' \
+                                                           'Please ensure the input is the output from a ' \
+                                                           'Business.get* function.'
+
+        local_srs = business_dataframe['brand_name'].value_counts() > local_threshold
+        brand_names = local_srs[local_srs].index.values
+        business_dataframe['brand_name_category'] = business_dataframe.brand_name.apply(
+            lambda val: val if val in brand_names else 'local_brand')
+
+        return business_dataframe
 
     @local_vs_gis
     def get_by_name(self, business_name: str,
@@ -138,7 +325,7 @@ class Business(object):
 
     @local_vs_gis
     def get_by_code(self, category_code: str, area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
-                    code_column: str = 'NAICS', name_column: str = 'CONAME', id_column: str = 'LOCNUM',
+                    code_type: str = 'NAICS', name_column: str = 'CONAME', id_column: str = 'LOCNUM',
                     local_threshold: int = 0) -> pd.DataFrame:
         """
         Search for businesses based on business category code. In North America, this typically is either the NAICS or
@@ -151,7 +338,7 @@ class Business(object):
                 beginning.
             area_of_interest: Required
                 Geographic area to search business listings for businesses in the category.
-            code_column: Optional
+            code_type: Optional
                 The column in the business listing data to search for the input business code. In the United
                 States, this is either NAICS or SIC. The default is NAICS.
             name_column: Optional
@@ -229,7 +416,7 @@ class Business(object):
 
     def _get_by_code_local(self, category_code: [str, list],
                            area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
-                           code_column: str = 'NAICS', name_column: str = 'CONAME',
+                           code_type: str = 'NAICS', name_column: str = 'CONAME',
                            id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
         """Local implementation for get by code."""
         # if the code was input as a number, convert to a string
@@ -253,6 +440,29 @@ class Business(object):
 
         return biz_std_df
 
+    def _get_by_code_gis(self, category_code: [str, list],
+                         area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
+                         code_type: str = 'NAICS', name_column: str = 'CONAME',
+                         id_column: str = 'LOCNUM', local_threshold: int = 0) -> pd.DataFrame:
+        """Web GIS implementation for get by code."""
+        # ensure the AOI is a spatially enabled dataframe
+        aoi_df = get_spatially_enabled_dataframe(area_of_interest)
+
+        # check the code type to ensure it is valid
+        code_type = code_type.upper()
+        assert code_type in ['NAICS', 'SIC'], 'code_type must be either "NAICS" or "SIC"'
+
+        # get the businesses
+        if code_type == 'NAICS':
+            biz_df = get_businesses_gis(aoi_df, self.source, code_naics=category_code)
+        else:
+            biz_df = get_businesses_gis(aoi_df, self.source, code_sic=category_code)
+
+        # tweak the schema for output
+        biz_std_df = self._add_std_cols(biz_df, id_column, name_column, local_threshold)
+
+        return biz_std_df
+
     def _get_by_name_local(self, business_name: str,
                            area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
                            name_column: str = 'CONAME', id_col: str = 'LOCNUM') -> pd.DataFrame:
@@ -264,6 +474,21 @@ class Business(object):
         biz_df = self._local_get_by_attribute_and_aoi(sql, area_of_interest)
 
         # add standard schema columns onto output
+        biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
+
+        return biz_std_df
+
+    def _get_by_name_gis(self, business_name: str,
+                         area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
+                         name_column: str = 'CONAME', id_col: str = 'LOCNUM') -> pd.DataFrame:
+        """Web GIS implementation for get by name."""
+        # make sure the area of interest is a spatially enabled dataframe
+        aoi_df = get_spatially_enabled_dataframe(area_of_interest)
+
+        # get businesses from the Web GIS
+        biz_df = get_businesses_gis(aoi_df, self.source, business_name)
+
+        # standardize the output
         biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
 
         return biz_std_df
@@ -307,10 +532,7 @@ class Business(object):
             brnd_lyr = arcpy.management.MakeFeatureLayer(brnd_fc)[0]
 
         # get the top n category codes by retaining only those describing more than 50% of the brand locations
-        cnt_df = cd_lst.value_counts().to_frame('cnt')
-        cnt_df['pct'] = cnt_df.cnt.apply(lambda x: x / cnt_df.cnt.sum())
-        cnt_df['pct_cumsum'] = cnt_df['pct'].cumsum()
-        cd_vals = cnt_df[(cnt_df['pct_cumsum'] < 0.5) | (cnt_df['pct'] > 0.5)].index.values
+        cd_vals = get_top_codes(cd_lst)
 
         # combine the retrieved codes into a concise sql expression
         cat_sql = ' OR '.join([f"{code_column} = '{cd}'" for cd in cd_vals])
@@ -330,6 +552,53 @@ class Business(object):
 
         # convert the layer to a spatially enabled dataframe in WGS84
         comp_df = GeoAccessor.from_featureclass(comp_lyr).dm.project(4326)
+
+        # add standard schema columns onto output
+        biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)
+
+        return biz_std_df
+
+    def _get_competition_gis(self, brand_businesses: [str, pd.DataFrame],
+                                   area_of_interest: [pd.DataFrame, pd.Series, Geometry, list],
+                                   name_column: str = 'CONAME',
+                                   code_column: str = 'NAICS', id_column: str = 'LOCNUM',
+                                   local_threshold: int = 0) -> pd.DataFrame:
+        """Web GIS implementation for get_competition"""
+
+        # prepare brand businesses
+        if isinstance(brand_businesses, str):
+
+            # search businesses to get brand businesses to use for locating the competition
+            brnd_df = self._get_by_name_gis(brand_businesses, area_of_interest)
+
+        # otherwise, if (hopefully) a Spatially Enabled DataFrame
+        elif isinstance(brand_businesses, pd.DataFrame):
+
+            # make sure the dataframe is Spatially Enabled - checking for name MUCH faster than validating
+            assert brand_businesses.spatial.name is not None, 'brand_business DataFrame must be a Spatially Enabled ' \
+                                                              'DataFrame. You may need to run ' \
+                                                              'df.spatial.set_geometry("SHAPE") for the GeoAccessor ' \
+                                                              'to recognize the spatial column.'
+
+            # simply reassign to dataframe variable
+            brnd_df = brand_businesses
+
+        # catch anything else
+        else:
+            raise Exception('"brand_business" must be either a string describing the input name, or a Spatially Enabled'
+                            f'DataFrame of the brand locations - not {type(brand_businesses)}.')
+
+        # get a series of codes from the brand dataframe
+        cd_lst = brnd_df[code_column]
+
+        # get the codes comprising the majority of codes describing the brand locations
+        top_cd_lst = get_top_codes(cd_lst)
+
+        # use these top codes to get the locations in the area of interest matching these codes
+        code_df = self.get_by_code(top_cd_lst, aoi_df, code_type=code_column, local_threshold=local_threshold)
+
+        # remove brand locations from the result based on the unique identifier column
+        comp_df = code_df[~code_df['id'].isin(brnd_df['id'])]
 
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)

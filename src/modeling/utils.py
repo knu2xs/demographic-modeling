@@ -9,7 +9,8 @@ from typing import AnyStr, Union
 from arcgis.env import active_gis
 from arcgis.features import GeoAccessor
 from arcgis.gis import GIS, User
-from arcgis.geometry import Geometry
+from arcgis.geometry import Geometry, SpatialReference
+import numpy as np
 import pandas as pd
 
 
@@ -283,3 +284,58 @@ def get_sanitized_names(names: Union[str, list, tuple, pd.Series]) -> pd.Series:
     sani_names = pd.Series(nm_df.columns)
 
     return sani_names
+
+
+def validate_spatial_reference(spatial_reference: Union[str, int, dict, SpatialReference]):
+    """Validate the variety of ways a spatial reference can be inputted. This does not validate the WKID."""
+    # instantiate the output spatial reference variable
+    sr = None
+
+    if isinstance(spatial_reference, dict):
+        assert 'wkid' in spatial_reference.keys(), 'If providing spatial reference as a dictionary, it must conform '\
+                                                   'look like {"wkid": <WKID>}, such as {"wkid": 4326}.'
+        sr = spatial_reference
+    elif isinstance(spatial_reference, str):
+        assert spatial_reference.isdecimal(), 'If providing a string to identify a spatial reference, it must be a ' \
+                                              'WKID for your desired spatial reference.'
+        sr = {'wkid': spatial_reference}
+    elif isinstance(spatial_reference, int):
+        sr = {'wkid': spatial_reference}
+    elif isinstance(spatial_reference, SpatialReference):
+        sr = SpatialReference
+    elif avail_arcpy:
+        import arcpy
+        if isinstance(spatial_reference, arcpy.SpatialReference):
+            sr = SpatialReference(spatial_reference.factoryCode)
+
+    # if nothing has been found, something is wrong
+    if sr is None:
+        raise Exception('The spatial reference must be either a string or integer specify the WKID, a dictionary '
+                        'specifying the WKID such as {"wkid": 4326}, or a SpatialReference object.')
+
+    return sr
+
+
+def get_spatially_enabled_dataframe(input_object: Union[pd.DataFrame, pd.Series, Geometry, list, tuple, np.ndarray],
+                                    spatial_column: str = 'SHAPE') -> pd.DataFrame:
+    """Garbage disposal taking variety of possible inputs and outputting, if possible, a Spatially Enabled Pandas
+    DataFrame."""
+    # if just a geometry passed in, we need to get it into an iterable
+    if isinstance(input_object, Geometry):
+        input_object = [input_object]
+
+    # now, if any type of iterable other than a series, make into a series
+    if isinstance(input_object, (list, tuple, np.ndarray)):
+        input_object = pd.Series(input_object)
+
+    # at this juncture, the only real options are either a Series or DataFrame, so if Series, make into DataFrame
+    if isinstance(input_object, pd.Series):
+        input_object = input_object.to_frame('SHAPE')
+
+    # if the geometry has not been set, take care of it
+    if input_object.spatial.name is None:
+        assert spatial_column in input_object.columns, f'The spatial column cannot be set to {spatial_column}, ' \
+                                                       f'because it is not a column in the input DataFrame.'
+        input_object.spatial.set_geometry(spatial_column)
+
+    return input_object

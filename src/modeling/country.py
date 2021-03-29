@@ -13,9 +13,9 @@ from arcgis.geometry import Geometry
 import numpy as np
 import pandas as pd
 
-from ._xml_interrogation import get_heirarchial_geography_dataframe  # need this to be added to arcpy._ba
 from .utils import avail_arcpy, local_vs_gis, set_source, geography_iterable_to_arcpy_geometry_list, can_enrich_gis, \
     has_networkanalysis_gis, get_sanitized_names
+from .businesses import Business
 
 if avail_arcpy:
     import arcpy
@@ -308,6 +308,18 @@ class Country:
         return var_df
 
     @property
+    def business(self):
+        """
+        Access to business object instance for the country.
+
+        Returns:
+            dm.Business object instance.
+        """
+        if self._business is None:
+            self._business = Business(self)
+        return self._business
+
+    @property
     def _enrich_variables_gis(self):
         """GIS implementation getting enrichment variables."""
         # get the data collections from the GIS enrichment REST endpiont
@@ -433,6 +445,7 @@ class Country:
     def geography_levels(self):
         """DataFrame of available geography levels."""
         if self._geography_levels is None and self.source == 'local':
+            from ._xml_interrogation import get_heirarchial_geography_dataframe
             self._geography_levels = get_heirarchial_geography_dataframe(self.geo_name, self.year)
 
         # if source is a GIS instance
