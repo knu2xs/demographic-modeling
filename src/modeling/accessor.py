@@ -6,9 +6,10 @@ from typing import Union
 
 from arcgis.features.geo._internals import register_dataframe_accessor
 from arcgis.gis import GIS
-from arcgis.geometry import SpatialReference
+from arcgis.geometry import SpatialReference, Geometry
 
 from .country import Country, GeographyLevel
+from .businesses import Business
 
 
 @register_dataframe_accessor('mdl')
@@ -91,7 +92,7 @@ class Modeling:
         return geo_lvl
 
     def enrich(self, enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None,
-               data_collections: Union[str, list, np.array, pd.Series] = None, country: Country = None) -> pd.DataFrame:
+               country: Country = None) -> pd.DataFrame:
         """
         Enrich the DataFrame using the provided enrich variable list or data
         collections list. Either a variable list or list of data
@@ -102,8 +103,6 @@ class Modeling:
                 List of data variables for enrichment. This can optionally
                 be a filtered subset of the dataframe property of an instance
                 of the Country object.
-            data_collections:
-                List of data collections for enrichment.
             country: Optional
                 Country object instance. This must be included if the parent
                 dataframe was not created using this package's standard
@@ -247,3 +246,4 @@ class Modeling:
             setattr(near_df, '_cntry', source)
 
         return near_df
+
