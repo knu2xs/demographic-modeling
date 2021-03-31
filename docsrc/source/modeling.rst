@@ -8,14 +8,14 @@ aggregation and dissemination methods.
 .. autoclass:: modeling.Country
    :members:
 
-ModelingAccessor (`mdl`) Pandas DataFrame Accessor
+ModelingAccessor (`mdl`)
 ----------------------------------------------------------
 
 Besides the Country object, the DemographicModeling object, a Pandas
 DataFrame Accessor, likely is going to be one of the most often used
-objects in this package. The DemograhpicModeling object rarely, if ever,
+objects in this package. The ModelingAccessor object rarely, if ever,
 is created directly. Rather, it is accessed as a property of a Spatially
-Enabled DataFrame
+Enabled DataFrame.
 
 .. code-block:: python
 
@@ -32,8 +32,10 @@ Enabled DataFrame
 
     # get current year key variables for enrichment
     e_vars = cntry.enrich_variables
-    key_vars = e_vars[(e_vars.data_collection.str.startswith('Key'))
-                     & (e_vars.name.str.endswith('CY'))]
+    key_vars = e_vars[
+        (e_vars.data_collection.str.startswith('Key'))
+        & (e_vars.name.str.endswith('CY'))
+    ]
 
     # use the DemographicModeling accessor to now enrich the block groups
     enrich_df = ta_df.mdl.enrich(key_vars)
