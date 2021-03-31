@@ -596,7 +596,7 @@ class Business:
 
         # ensure the data column data types match
         src_typ, drp_typ = source_df[source_id_column].dtype, drop_dataframe[drop_id_column].dtype
-        assert src_typ == drp_typ, f'The data type of the id columns must match. They appear to be {src_type} and ' \
+        assert src_typ == drp_typ, f'The data type of the id columns must match. They appear to be {src_typ} and ' \
                                    f'{drp_typ}.'
 
         # remove brand locations from the result based on the unique identifier column

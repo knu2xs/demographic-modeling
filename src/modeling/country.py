@@ -15,7 +15,6 @@ import pandas as pd
 
 from .utils import avail_arcpy, local_vs_gis, set_source, geography_iterable_to_arcpy_geometry_list, can_enrich_gis, \
     has_networkanalysis_gis, get_sanitized_names
-from .businesses import Business
 
 if avail_arcpy:
     import arcpy
@@ -306,18 +305,6 @@ class Country:
         )
 
         return var_df
-
-    @property
-    def business(self):
-        """
-        Access to business object instance for the country.
-
-        Returns:
-            dm.Business object instance.
-        """
-        if self._business is None:
-            self._business = Business(self)
-        return self._business
 
     @property
     def _enrich_variables_gis(self):

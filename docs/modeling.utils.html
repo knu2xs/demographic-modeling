@@ -1,0 +1,389 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>modeling.utils module &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Country" href="modeling.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> demographic-modeling-module
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html">Country</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html#modelingaccessor-mdl-pandas-dataframe-accessor">ModelingAccessor (<cite>mdl</cite>) Pandas DataFrame Accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html#business">Business</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">modeling.utils module</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">demographic-modeling-module</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>modeling.utils module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/modeling.utils.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-modeling.utils">
+<span id="modeling-utils-module"></span><h1>modeling.utils module<a class="headerlink" href="#module-modeling.utils" title="Permalink to this headline">¶</a></h1>
+<p>Utility functions useful for the modeling module - the glue functions not fitting neatly anywhere else.</p>
+<dl class="py function">
+<dt id="modeling.utils.can_enrich_gis">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">can_enrich_gis</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.can_enrich_gis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine if the provided user has data enrichment privileges in the Web GIS.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The current user can be retrieved using <cite>gis.users.me</cite> for input.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>user</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code>) – Required <cite>arcgis.gis.User</cite> object instance.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Boolean indicating if the provided user has enrichment privileges in the Web GIS.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.geography_iterable_to_arcpy_geometry_list">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">geography_iterable_to_arcpy_geometry_list</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geography_iterable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geometry_filter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.geography_iterable_to_arcpy_geometry_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Processing helper to convert a iterable of geography_levels to a list of ArcPy Geometry objects suitable for input
+into ArcGIS ArcPy geoprocessing tools.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>geography_iterable</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Geometry</span></code>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>]) – Iterable containing valid geometries.</p></li>
+<li><p><strong>geometry_filter</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – String point|polyline|polygon to use for validation to ensure correct geometry type.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of ArcPy objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.get_sanitized_names">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">get_sanitized_names</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.get_sanitized_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sanitize the column names using the GeoAccessor.sanitize_column_names function.
+Useful when trying to match up column names from previously enriched data.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This process is, especially with long lists, painfully slow, so only use
+if absolutely necessary.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>names</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>]) – Iterable (list, tuple, pd.Series) of names to be “sanitized”</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>pd.Series of column names</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.get_spatially_enabled_dataframe">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">get_spatially_enabled_dataframe</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spatial_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'SHAPE'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.get_spatially_enabled_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Garbage disposal taking variety of possible inputs and outputting, if possible, a Spatially Enabled Pandas
+DataFrame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.get_top_codes">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">get_top_codes</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">codes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.get_top_codes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the top category codes by only keeping those compromising 50% or greater of the records.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>codes</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>]) – Iterable, preferable a Pandas Series, of code values to filter.</p></li>
+<li><p><strong>threshold</strong> – Decimal value representing the proportion of values to use for creating
+the list of top values.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of unique code values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.has_networkanalysis_gis">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">has_networkanalysis_gis</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.has_networkanalysis_gis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine if the provided user has network analysis privileges in the Web GIS.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The current user can be retrieved using <cite>gis.users.me</cite> for input.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">User</span></code>) – Required <cite>arcgis.gis.User</cite> object instance.</p></li>
+<li><p><strong>network_function</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Optional string describing specific network function to check for.
+Valid values include ‘closestfacility’, ‘locationallocation’, ‘optimizedrouting’,
+‘origindestinationcostmatrix’, ‘routing’, ‘servicearea’, or ‘vehiclerouting’.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns: Boolean indicating if the provided user has network analysis privileges in the Web GIS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.local_business_analyst_avail">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">local_business_analyst_avail</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.local_business_analyst_avail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a local installation of Business Analyst is available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.local_vs_gis">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">local_vs_gis</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fn</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.local_vs_gis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator to facilitate bridging between local and remote resources.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.module_avail">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">module_avail</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">module_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.module_avail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine if module is available in this environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.preproces_code_inputs">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">preproces_code_inputs</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">codes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.preproces_code_inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>helper funtion to preprocess naics or sic codes</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.set_source">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">set_source</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">in_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.set_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to check source input. The source can be set explicitly, but if nothing is provided, it
+assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a GIS object
+instance is available in the current session.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">GIS</span></code>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="modeling.utils.validate_spatial_reference">
+<code class="sig-prename descclassname"><span class="pre">modeling.utils.</span></code><code class="sig-name descname"><span class="pre">validate_spatial_reference</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_reference</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.utils.validate_spatial_reference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate the variety of ways a spatial reference can be inputted. This does not validate the WKID.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="modeling.html" class="btn btn-neutral float-left" title="Country" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Joel McCune.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

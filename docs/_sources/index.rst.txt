@@ -62,8 +62,8 @@ at the documentation.
    :caption: Contents:
 
    Installation and Configuration<install>
-   Demographic Modeling<dm>
-   dm.utils
+   Demographic Modeling<modeling>
+   modeling.utils
 
 
 Indices and tables
