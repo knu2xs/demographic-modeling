@@ -580,7 +580,7 @@ if you need to massage some of the brand name outputs.</p>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>local_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Integer count below which a brand name will be consider a local brand.</p></li>
-<li><p><strong>inplace</strong> – Boolean indicating if the dataframe should be modified in place, or a new one created and returned.
+<li><p><strong>inplace</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>) – Boolean indicating if the dataframe should be modified in place, or a new one created and returned.
 The default is False to not inadvertently</p></li>
 </ul>
 </dd>
@@ -599,7 +599,7 @@ Otherwise, returns None.</p>
 <span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
 
 <span class="c1"># create a country object instance</span>
-<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">gis</span><span class="p">)</span>
 
 <span class="c1"># create an area of interest</span>
 <span class="n">aoi_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Seattle&#39;</span><span class="p">)</span>
@@ -651,7 +651,7 @@ rows to drop or retain. Default is ‘location_id’.</p></li>
 <span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
 
 <span class="c1"># create a country object instance</span>
-<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">gis</span><span class="p">)</span>
 
 <span class="c1"># create an area of interest</span>
 <span class="n">aoi_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Seattle&#39;</span><span class="p">)</span>
@@ -827,7 +827,7 @@ be sampled to return the industry code values identifying the locations.</p></li
 <span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
 
 <span class="c1"># create a country object instance</span>
-<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">gis</span><span class="p">)</span>
 
 <span class="c1"># create an area of interest</span>
 <span class="n">aoi_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Minneapolis&#39;</span><span class="p">)</span>

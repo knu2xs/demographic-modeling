@@ -10,8 +10,8 @@ ENV_NAME = demogrphic-modeling
 CONDA_PARENT = arcgispro-py3
 
 # make conda commands available in the script, notably for activation
-CONDA_BASE=$(conda info --base)
-source $CONDA_BASE/etc/profile.d/conda.sh
+# CONDA_BASE=$(conda info --base)
+# source $CONDA_BASE/etc/profile.d/conda.sh
 
 #################################################################################
 # COMMANDS                                                                      #
@@ -31,22 +31,14 @@ clean:
 ## Build the local environment from the environment file
 env:
 	conda env create -f environment.yml
-	jupyter labextension install @jupyter-widgets/jupyterlab-manager -y
-        jupyter labextension install arcgis-map-ipywidget@1.8.1 -y
 	@echo ">>> New conda environment, $(ENV_NAME), created. Activate with:\n- source activate $(ENV_NAME)\n- make env_activate"
-
-## Export the current environment
-env_export:
-	conda env export --name $(ENV_NAME) > environment.yml
-	@echo ">>> $(PROJECT_NAME) conda environment exported to ./environment.yml"
 
 create_kernel:
 	python -m ipykernel install --user --name $(ENV_NAME) --display-name "$(PROJECT_NAME)"
 
-## Activate the environment - doesn't work, so commented out
-# env_activate:
-# 	. activate $(PROJECT_NAME)
-# 	@echo ">>> $(PROJECT_NAME) conda environment activated."
+docs:
+    (cd ./docsrc && make html)
+    cp -r ./docsrc/build/html/* ./docs
 
 ## Run all tests in module
 test:
