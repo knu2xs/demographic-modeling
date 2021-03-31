@@ -228,3 +228,149 @@ def test_enrich_keycy_ent_batch(ent_usa):
     cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
     enrch_df = cnty_df.mdl.enrich(kv)
     assert isinstance(enrch_df, pd.DataFrame)
+
+
+# businesses functionality testing
+@pytest.fixture
+def aoi_local(local_usa):
+    aoi_df = local_usa.cbsas.get('seattle')
+    return aoi_df
+
+
+@pytest.fixture
+def aoi_gis_agol(agol_usa):
+    aoi_df = agol_usa.cbsas.get('seattle')
+    return aoi_df
+
+
+@pytest.fixture
+def aoi_gis_ent(ent_usa):
+    aoi_df = ent_usa.cbsas.get('seattle')
+    return aoi_df
+
+
+def get_business_by_name_test(aoi_df):
+    biz_df = aoi_df.mdl.business.get_by_name('ace hardware')
+    assert isinstance(biz_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(biz_df.columns).all()
+
+
+def test_get_business_by_name_local(aoi_local):
+    get_business_by_name_test(aoi_local)
+
+
+def test_get_business_by_name_agol(aoi_gis_agol):
+    get_business_by_name_test(aoi_gis_agol)
+
+
+def test_get_business_by_name_ent(aoi_gis_ent):
+    get_business_by_name_test(aoi_gis_ent)
+
+
+def get_business_by_code_naics_test(aoi_df):
+    biz_df = aoi_df.mdl.business.get_by_code('44413005')
+    assert isinstance(biz_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(biz_df.columns).all()
+
+
+def test_get_business_by_code_naics_local(aoi_local):
+    get_business_by_code_naics_test(aoi_local)
+
+
+def test_get_business_by_code_naics_agol(aoi_gis_agol):
+    get_business_by_code_naics_test(aoi_gis_agol)
+
+
+def test_get_business_by_code_naics_ent(aoi_gis_ent):
+    get_business_by_code_naics_test(aoi_local)
+
+
+def get_business_by_code_naics_truncated_test(aoi_df):
+    biz_df = aoi_df.mdl.business.get_by_code('444130')
+    assert isinstance(biz_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(biz_df.columns).all()
+
+
+def test_get_business_by_code_naics_truncated_local(aoi_local):
+    get_business_by_code_naics_truncated_test(aoi_local)
+
+
+def test_get_business_by_code_naics_truncated_agol(aoi_gis_agol):
+    get_business_by_code_naics_truncated_test(aoi_gis_agol)
+
+
+def test_get_business_by_code_naics_truncated_ent(aoi_gis_ent):
+    get_business_by_code_naics_truncated_test(aoi_local)
+
+
+def get_business_by_code_sic_test(aoi_df):
+    biz_df = aoi_df.mdl.business.get_by_code('525104', code_type='SIC')
+    assert isinstance(biz_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(biz_df.columns).all()
+
+
+def test_get_business_by_code_sic_local(aoi_local):
+    get_business_by_code_sic_test(aoi_local)
+
+
+def test_get_business_by_code_sic_agol(aoi_gis_agol):
+    get_business_by_code_sic_test(aoi_gis_agol)
+
+
+def test_get_business_by_code_sic_ent(aoi_gis_ent):
+    get_business_by_code_sic_test(aoi_local)
+
+
+def get_business_by_code_sic_truncated_test(aoi_df):
+    biz_df = aoi_df.mdl.business.get_by_code('5251', code_type='SIC')
+    assert isinstance(biz_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(biz_df.columns).all()
+
+
+def test_get_business_by_code_sic_truncated_local(aoi_local):
+    get_business_by_code_sic_truncated_test(aoi_local)
+
+
+def test_get_business_by_code_sic_truncated_agol(aoi_gis_agol):
+    get_business_by_code_sic_truncated_test(aoi_gis_agol)
+
+
+def test_get_business_by_code_sic_truncated_ent(aoi_gis_ent):
+    get_business_by_code_sic_truncated_test(aoi_local)
+
+
+def get_business_competition_using_brand_name_test(aoi_df):
+    cmp_df = aoi_df.mdl.business.get_competition('ace hardware')
+    assert isinstance(cmp_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(cmp_df.columns).all()
+
+
+def test_get_business_competition_using_brand_name_local(aoi_local):
+    get_business_competition_using_brand_name_test(aoi_local)
+
+
+def test_get_business_competition_using_brand_name_agol(aoi_gis_agol):
+    get_business_competition_using_brand_name_test(aoi_gis_agol)
+
+
+def test_get_business_competition_using_brand_name_ent(aoi_gis_ent):
+    get_business_competition_using_brand_name_test(aoi_gis_ent)
+
+
+def get_business_competition_using_brand_df_test(aoi_df):
+    biz_df = aoi_df.mdl.business.get('ace hardware')
+    cmp_df = aoi_df.mdl.business.get(biz_df)
+    assert isinstance(cmp_df, pd.DataFrame)
+    assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(cmp_df.columns).all()
+
+
+def test_get_business_competition_using_brand_df_local(aoi_local):
+    get_business_competition_using_brand_df_test(aoi_local)
+
+
+def test_get_business_competition_using_brand_df_agol(aoi_gis_agol):
+    get_business_competition_using_brand_df_test(aoi_gis_agol)
+
+
+def test_get_business_competition_using_brand_df_ent(aoi_gis_ent):
+    get_business_competition_using_brand_df_test(aoi_local)

@@ -339,3 +339,46 @@ def get_spatially_enabled_dataframe(input_object: Union[pd.DataFrame, pd.Series,
         input_object.spatial.set_geometry(spatial_column)
 
     return input_object
+
+
+def preproces_code_inputs(codes):
+    """helper funtion to preprocess naics or sic codes"""
+    if isinstance(codes, (str, int)):
+        codes = [codes]
+
+    elif isinstance(codes, (pd.Series, list, tuple, np.ndarray)):
+        codes = [str(cd) if isinstance(cd, int) else cd for cd in codes]
+
+    return codes
+
+
+def get_top_codes(codes: Union[pd.Series, list, tuple], threshold=0.5) -> list:
+    """Get the top category codes by only keeping those compromising 50% or greater of the records.
+
+    Args:
+        codes: Iterable, preferable a Pandas Series, of code values to filter.
+        threshold: Decimal value representing the proportion of values to use for creating
+            the list of top values.
+
+    Returns:
+        List of unique code values.
+    """
+    # check the threshold to ensure it is deicmal
+    assert 0 < threshold < 1, f'"threshold" must be a decimal value between zero and one, not {threshold}'
+
+    # ensure the input codes iterable is a Pandas Series
+    cd_srs = codes if isinstance(codes, pd.Series) else pd.Series(codes)
+
+    # get the instance count for each unique code value
+    cnt_df = cd_srs.value_counts().to_frame('cnt')
+
+    # calculate the percent each of the codes comprises of the total values as a decimal
+    cnt_df['pct'] = cnt_df.cnt.apply(lambda x: x / cnt_df.cnt.sum())
+
+    # calculate a running total of the percent for each value (running total percent)
+    cnt_df['pct_cumsum'] = cnt_df['pct'].cumsum()
+
+    # finally, get the values comprising the code values for the top threshold
+    cd_vals = list(cnt_df[(cnt_df['pct_cumsum'] < threshold) | (cnt_df['pct'] > threshold)].index)
+
+    return cd_vals

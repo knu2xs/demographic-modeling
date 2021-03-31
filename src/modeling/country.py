@@ -426,11 +426,12 @@ class Country:
         relevant if the source is a GIS instance.
 
         Args:
-            network_function: Optional string describing specific network function to check for.
-            Valid values include 'closestfacility', 'locationallocation', 'optimizedrouting',
-            'origindestinationcostmatrix', 'routing', 'servicearea', or 'vehiclerouting'.
+            network_function: Optional string describing specific network function to check for. Valid values include
+                'closestfacility', 'locationallocation', 'optimizedrouting', 'origindestinationcostmatrix', 'routing',
+                'servicearea', or 'vehiclerouting'.
 
-        Returns: Boolean indicating if the country instance, based on permissions, has network analysis privileges.
+        Returns:
+            Boolean indicating if the country instance, based on permissions, has network analysis privileges.
         """
         if isinstance(self.source, GIS):
             if self.source.users.me is not None:

@@ -1,7 +1,7 @@
 """
 The modeling module provides capabilities supporting quantitative geographic analysis.
 """
-from .country import Country, get_countries
-from .accessor import Modeling
+from .country import Country, Business, get_countries
+from .accessor import ModelingAccessor
 
-__all__ = ['get_countries', 'Country', 'Modeling']
+__all__ = ['get_countries', 'Country', 'Business', 'ModelingAccessor']
