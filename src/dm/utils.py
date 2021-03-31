@@ -10,10 +10,10 @@ from arcgis.features import FeatureSet, FeatureLayer, GeoAccessor
 from arcgis.geometry import Geometry
 import pandas as pd
 
-from ._registry import get_ba_usa_key_str, get_child_key_strs
-# from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
-
 arcpy_avail = True if importlib.util.find_spec("arcpy") else False
+
+if arcpy_avail:
+    from ._registry import get_ba_usa_key_str, get_child_key_strs
 
 
 class Environment:

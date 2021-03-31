@@ -1,33 +1,35 @@
-import os.path
-from pathlib import Path
+"""
+arcgis.modeling._utils tests
+"""
 import sys
+from pathlib import Path
 
-from arcgis.features import GeoAccessor
-import arcpy
+dir_src = Path(__file__).parent.parent.parent.parent/'src'
+assert dir_src.exists()
+sys.path.insert(0, str(dir_src))
 
-sys.path.insert(0, os.path.abspath('../'))
-import dm
+import modeling
 
-
-def test_env_init_local():
-
-    assert dm.utils.arcpy_avail is True
+from .fixtures import agol_gis, ent_gis
 
 
-def test_geography_iterable_to_arcpy_geometry_list():
+def test_can_enrich_true(agol_gis):
+    usr = agol_gis.users.me
+    can_enrich = arcgis.modeling._utils.can_enrich_gis(usr)
+    assert can_enrich is True
 
-    pass
-    assert dm.utils.geography_iterable_to_arcpy_geometry_list()
+
+def test_module_avail_false():
+    avail = modeling.utils.module_avail('scrapy')
+    assert avail is False
 
 
-def test_add_enrich_aliases():
-    if dm.utils.env.arcpy_avail:
-        cntry = dm.Country('USA')
-        query_str = "ID IN ('530670117102','530770034001','530150009003','530770008001','530050108033','530459613002')"
-        bg_df = cntry.level(0).get(query_string=query_str)
-        bg_fc = bg_df.spatial.to_featureclass(Path(arcpy.env.scratchGDB)/'bg_test')
-        dm.utils.add_enrich_aliases(bg_fc, cntry)
-        fld_lst = arcpy.ListFields(bg_fc)
-        assert fld_lst
-    else:
-        assert False, 'This test requires arcpy and USA local data.'
+def test_avail_arcpy():
+    avail = modeling.utils.avail_arcpy
+    assert avail is True
+
+
+def test_local_ba_avail():
+    # requires Pro + BA to be installed locally to work correctly
+    avail = modeling.utils.local_business_analyst_avail()
+    assert avail is True

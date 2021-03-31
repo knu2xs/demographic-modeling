@@ -3,11 +3,11 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Welcome to Demographic-Modeling-Module’s documentation! &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
+  <title>Welcome to Demographic-Modeling’s documentation! &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
   
 
   
@@ -16,7 +16,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -29,7 +32,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -50,7 +52,7 @@
           
 
           
-            <a href="#" class="icon icon-home" alt="Documentation Home"> demographic-modeling-module
+            <a href="#" class="icon icon-home"> demographic-modeling-module
           
 
           
@@ -84,10 +86,10 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Configuration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.html">Country</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.html#demographicmodeling-dm-pandas-dataframe-accessor">DemographicModeling (<cite>dm</cite>) Pandas DataFrame Accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.html#business">Business</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.utils.html">dm.utils module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html">Country</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html#modelingaccessor-mdl-pandas-dataframe-accessor">ModelingAccessor (<cite>mdl</cite>) Pandas DataFrame Accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html#business">Business</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.utils.html">modeling.utils module</a></li>
 </ul>
 
             
@@ -128,18 +130,20 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
     
       <li><a href="#" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Welcome to Demographic-Modeling-Module’s documentation!</li>
+      <li>Welcome to Demographic-Modeling’s documentation!</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -153,12 +157,11 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="welcome-to-demographic-modeling-module-s-documentation">
-<h1>Welcome to Demographic-Modeling-Module’s documentation!<a class="headerlink" href="#welcome-to-demographic-modeling-module-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>This project for Demographic Modeling does not introduce <em>new</em> functionality to ArcGIS,
-but <em>does</em> make demographic modeling using machine learning <em>dramatically</em> easier. This
-really is a much better organized evolution of the tools I developed to perform this
-type of analysis for my own work with customers. Hence, my pain is your gain.</p>
+  <div class="section" id="welcome-to-demographic-modeling-s-documentation">
+<h1>Welcome to Demographic-Modeling’s documentation!<a class="headerlink" href="#welcome-to-demographic-modeling-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Demographic Modeling does not introduce <em>new</em> functionality to ArcGIS, but <em>does</em> make using ArcGIS Business Analyst
+with machine learning <em>dramatically</em> easier. The Demographic Modeling Module provides a single Python interface for
+using ArcGIS Business Analyst for feature creation as part of a data preparation pipeline.</p>
 <p>To get started with this project quickly, I suggest cloning the repo, install the package, and diving into the
 examples in the Jupyter Notebooks included in the repo. Play with the notebook examples. Change them for your data, and
 see what you can discover. From there, a lot more is included in the module documentation here to explore.</p>
@@ -169,30 +172,45 @@ see what you can discover. From there, a lot more is included in the module docu
 requirements, and then use these commands to start playing around on your own system.</p>
 <div class="section" id="requirements">
 <h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<p>The requirements vary based on how you are accessing Esri Business Analyst, whether through ArcGIS Pro or using
+Business Analyst Web. The latter, Business Analyst Web, can be either ArcGIS Enterprise with Business Analyst Server,
+or it can be simply using Business Analyst Web as part of ArcGIS Online.</p>
+<div class="section" id="arcgis-pro">
+<h3>ArcGIS Pro<a class="headerlink" href="#arcgis-pro" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li><p><a class="reference external" href="https://www.esri.com/en-us/arcgis/products/arcgis-pro/overview">ArcGIS Pro</a></p></li>
 <li><p><a class="reference external" href="https://www.esri.com/en-us/arcgis/products/arcgis-business-analyst/applications/desktop">Business Analyst</a> (Extends ArcGIS Pro)</p></li>
-<li><p><a class="reference external" href="https://doc.arcgis.com/en/esri-demographics/data/us-intro.htm">Locally Installed Data Bundle</a> (most examples use the United States, but <em>should</em> work for any country)</p></li>
+<li><p><a class="reference external" href="https://doc.arcgis.com/en/esri-demographics/data/us-intro.htm">Locally Installed Data Bundle</a> (most examples use the USA, but <em>should</em> work for any country)</p></li>
 <li><p><a class="reference external" href="https://git-scm.com/download/win">Git</a> (for cloning the code repo)</p></li>
 </ul>
+</div>
+<div class="section" id="business-analyst-web">
+<h3>Business Analyst Web<a class="headerlink" href="#business-analyst-web" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Conda (<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">MiniConda</a> or <a class="reference external" href="https://www.anaconda.com">Anaconda</a>)</p></li>
+<li><p>Python &gt; 3.5</p></li>
+<li><p><a class="reference external" href="https://git-scm.com/download/win">Git</a> (for cloning the code repo)</p></li>
+<li><p>Credentials with Access to Business Analyst Web instance (<a class="reference external" href="https://www.esri.com/en-us/arcgis/products/arcgis-business-analyst/applications/enterprise">ArcGIS Enterprise with Business Analyst Server</a> or <a class="reference external" href="https://www.esri.com/en-us/arcgis/products/arcgis-business-analyst/applications/web-mobile-apps">Business Analyst Web as part of ArcGIS Online</a>)</p></li>
+</ul>
+</div>
 </div>
 <div class="section" id="commands">
 <h2>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h2>
 <p>First, clone the repo, and step into the project directory.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">knu2xs</span><span class="o">/</span><span class="n">demographic</span><span class="o">-</span><span class="n">modeling</span><span class="o">-</span><span class="n">module</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/knu2xs/demographic-modeling-module
 
-<span class="n">cd</span> <span class="o">./</span><span class="n">demographic</span><span class="o">-</span><span class="n">modeling</span><span class="o">-</span><span class="n">module</span>
+<span class="nb">cd</span> ./demographic-modeling-module
 </pre></div>
 </div>
 <p>Next, take advantage of the make file to create a new Conda environment for you, and install
 the source code for you using PIP.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">make</span> <span class="n">env</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make env
 </pre></div>
 </div>
 <p>Now, jump into the notebooks directory and start looking around.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">./</span><span class="n">notebooks</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> ./notebooks
 
-<span class="n">jupyter</span> <span class="n">lab</span>
+jupyter lab
 </pre></div>
 </div>
 <p>Finally, once you’ve broken a few things, or want to figure out more, come back here and look
@@ -201,10 +219,10 @@ at the documentation.</p>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Configuration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.html">Country</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.html#demographicmodeling-dm-pandas-dataframe-accessor">DemographicModeling (<cite>dm</cite>) Pandas DataFrame Accessor</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.html#business">Business</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dm.utils.html">dm.utils module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html">Country</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html#modelingaccessor-mdl-pandas-dataframe-accessor">ModelingAccessor (<cite>mdl</cite>) Pandas DataFrame Accessor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.html#business">Business</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modeling.utils.html">modeling.utils module</a></li>
 </ul>
 </div>
 </div>
@@ -223,35 +241,28 @@ at the documentation.</p>
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="install.html" class="btn btn-neutral float-right" title="Demographic Modeling - Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
+        <a href="install.html" class="btn btn-neutral float-right" title="Demographic Modeling - Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Joel McCune
+        &#169; Copyright 2020, Joel McCune.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 

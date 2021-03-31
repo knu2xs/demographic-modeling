@@ -6,10 +6,10 @@ with open('README.md', 'r') as readme:
 setup(
     name='dm',
     package_dir={"": "src"},
-    packages=find_packages('src'),
+    packages=find_packages('src',  include=['dm', 'modeling']),
     version='0.1.0-dev0',
-    description='Demographic modeling module for ArcGIS Python API',
+    description='Demographic Modeling',
     long_description=long_description,
     author='Joel McCune',
-    license='No license file',
+    license='Apache 2.0',
 )
