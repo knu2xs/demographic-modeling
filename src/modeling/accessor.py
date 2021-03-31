@@ -55,7 +55,7 @@ class ModelingAccessor:
                     geo_name = self._cntry.levels.iloc[idx]['geo_name']
                     setattr(self, geo_name, GeographyLevel(geo_name, self._cntry, obj))
 
-    def get_level(self, geographic_level: int) -> GeographyLevel:
+    def level(self, geographic_level: int) -> GeographyLevel:
         """
         Retrieve a Spatially Enabled DataFrame of geometries corresponding
         to the index returned by the Country.geography_levels property. This is
