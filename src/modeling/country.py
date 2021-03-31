@@ -615,7 +615,7 @@ class Country:
             enrich_vars_df = enrich_vars_df.drop_duplicates(enrich_nm_col)
 
         # clean up the index
-        enrich_vars_df.reset_index(inplace=True, drop=True)
+        enrich_vars_df.reset_index(drop=True, inplace=True)
 
         return enrich_vars_df
 
@@ -650,7 +650,7 @@ class Country:
             enrich_vars_df = self.get_enrich_variables_dataframe_from_variable_list(enrich_variables)
 
         # now, drop any duplicates so we're not getting the same variable twice from different data collections
-        enrich_vars_df.drop_duplicates('name', inplace=True)
+        enrich_vars_df = enrich_vars_df.drop_duplicates('name').reset_index(drop=True)
 
         # note any variables submitted, but not found
         if len(enrich_variables) > len(enrich_vars_df.index):
