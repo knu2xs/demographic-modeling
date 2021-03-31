@@ -37,8 +37,8 @@ create_kernel:
 	python -m ipykernel install --user --name $(ENV_NAME) --display-name "$(PROJECT_NAME)"
 
 docs:
-    (cd ./docsrc && make html)
-    cp -r ./docsrc/build/html/* ./docs
+	(cd ./docsrc && make html)
+	cp -r ./docsrc/build/html/* ./docs
 
 ## Run all tests in module
 test:
