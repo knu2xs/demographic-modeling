@@ -468,7 +468,7 @@ class Business:
         return biz_df
 
     def calculate_brand_name_category(self, local_threshold: int = 0,
-                                      inplace=False) -> Union[pd.DataFrame, None]:
+                                      inplace: bool=False) -> Union[pd.DataFrame, None]:
         """
         For the output of any Business.get* function, calculate a column named 'brand_name_category'. This function is
         frequently used to re-calculate the category identifying unique local retailers, and group them collectively
@@ -495,7 +495,7 @@ class Business:
             gis = GIS('https://path.to.arcgis.enterprise.com/portal', username='batman', password='P3nnyw0rth!')
 
             # create a country object instance
-            cntry = Country('USA')
+            cntry = Country('USA', source=gis)
 
             # create an area of interest
             aoi_df = cntry.cbsas.get('Seattle')
@@ -530,12 +530,11 @@ class Business:
         biz_df = brnd_df if inplace else brnd_df.copy()
 
         # calculate the local_brand records based on the stated threshold
-        # biz_df['brand_name_category'] = biz_df.brand_name.apply(lambda v: v if v in brand_names else 'local_brand')
         brnd_cat_fltr = biz_df['brand_name'].isin(brand_names)
         biz_df.loc[~brnd_cat_fltr, 'brand_name_category'] = 'local_brand'
         biz_df.loc[brnd_cat_fltr, 'brand_name_category'] = biz_df.loc[brnd_cat_fltr]['brand_name']
 
-        return biz_df if inplace else None
+        return None if inplace else biz_df
 
     def drop_by_id(self, drop_dataframe: pd.DataFrame, source_id_column: str = 'location_id',
                    drop_id_column: str = 'location_id') -> pd.DataFrame:
@@ -563,7 +562,7 @@ class Business:
             gis = GIS('https://path.to.arcgis.enterprise.com/portal', username='batman', password='P3nnyw0rth!')
 
             # create a country object instance
-            cntry = Country('USA')
+            cntry = Country('USA', source=gis)
 
             # create an area of interest
             aoi_df = cntry.cbsas.get('Seattle')
@@ -629,7 +628,7 @@ class Business:
             gis = GIS('https://path.to.arcgis.enterprise.com/portal', username='batman', password='P3nnyw0rth!')
 
             # create a country object instance
-            cntry = Country('USA')
+            cntry = Country('USA', source=gis)
 
             # create an area of interest
             aoi_df = cntry.cbsas.get('Minneapolis')
