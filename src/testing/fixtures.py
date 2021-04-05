@@ -20,3 +20,9 @@ def agol_gis():
 def ent_gis():
     gis = GIS(ent_url, username=ent_usr, password=ent_pswd)
     return gis
+
+@pytest.fixture
+def counties_df():
+    from .test_data import counties
+    counties_df = counties.data_frame
+    return counties_df

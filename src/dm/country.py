@@ -11,10 +11,10 @@ import pandas as pd
 from . import utils
 from .businesses import Business
 from .utils import local_vs_gis, env
-from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
 
 if env.arcpy_avail:
     import arcpy
+    from ._xml_interrogation import get_enrich_variables_dataframe, get_heirarchial_geography_dataframe
 
     arcpy.env.overwriteOutput = True
 

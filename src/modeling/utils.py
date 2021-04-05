@@ -6,7 +6,6 @@ import importlib
 from pathlib import Path
 from typing import AnyStr, Union
 
-from arcgis.env import active_gis
 from arcgis.features import GeoAccessor
 from arcgis.gis import GIS, User
 from arcgis.geometry import Geometry, SpatialReference
@@ -79,6 +78,8 @@ def set_source(in_source: Union[str, GIS] = None) -> Union[str, GIS]:
     assumes the order of local first and then a Web GIS. Along the way, it also checks to see if a GIS object
     instance is available in the current session.
     """
+    # have to import here to load the active_gis
+    from arcgis.env import active_gis
 
     # if string input is provided, ensure setting to local and lowercase
     if isinstance(in_source, str):
@@ -103,6 +104,11 @@ def set_source(in_source: Union[str, GIS] = None) -> Union[str, GIS]:
     # if not using local, use a GIS
     elif isinstance(in_source, GIS):
         source = in_source
+
+    # provide a fall-though catch since active_gis is does not appear to be catching
+    else:
+        raise Exception('Source must be either "local" if using ArcGIS Pro with Business Analyst, or a GIS object '
+                        'instance connected ot ArcGIS Enterprise with Business Analyst Server or ArcGIS Online.')
 
     return source
 

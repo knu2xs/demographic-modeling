@@ -7,10 +7,10 @@ from arcgis.features import GeoAccessor
 # from .country import Country
 from .utils import arcpy_avail, local_vs_gis, geography_iterable_to_arcpy_geometry_list
 # from ._modify_geoaccessor import GeoAccessorIO as GeoAccessor
-from ._xml_interrogation import get_business_points_data_path
 
 if arcpy_avail:
     import arcpy
+    from ._xml_interrogation import get_business_points_data_path
 
 
 class Business(object):
