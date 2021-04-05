@@ -1,21 +1,10 @@
-Country
+ModelingAccessor (``mdl``)
 ----------------------------------------------------------
 
-The country object is the foundational building block for
-working with demographic data. This is due to data collection,
-aggregation and dissemination methods.
-
-.. autoclass:: modeling.Country
-   :members:
-
-ModelingAccessor (`mdl`)
-----------------------------------------------------------
-
-Besides the Country object, the DemographicModeling object, a Pandas
-DataFrame Accessor, likely is going to be one of the most often used
-objects in this package. The ModelingAccessor object rarely, if ever,
-is created directly. Rather, it is accessed as a property of a Spatially
-Enabled DataFrame.
+The DemographicModeling object, a Pandas DataFrame Accessor, likely is
+going to be one of the most often used objects in this package. The
+ModelingAccessor object is rarely, if ever, created directly. Rather,
+it is accessed as a property of a Spatially Enabled DataFrame.
 
 .. code-block:: python
 
@@ -48,3 +37,16 @@ Business
 
 .. autoclass:: modeling.Business
    :members:
+
+Country
+----------------------------------------------------------
+
+The country object is the foundational building block for
+working with demographic data. This is due to data collection,
+aggregation and dissemination methods.
+
+.. autoclass:: modeling.Country
+   :members:
+
+
+

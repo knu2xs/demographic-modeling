@@ -24,7 +24,7 @@ class ModelingAccessor:
     """
     The ModelingAccessor is a Pandas DataFrame accessor, a standalone namespace for
     accessing geographic modeling functionality. If the DataFrame was created using
-    a Country object, then the Modeling (``modeling``) namespace will automatically
+    a Country object, then the Modeling (``mdl``) namespace will automatically
     be available. However, if you want to use this functionality, and have not created
     the DataFrame using the Country object, you must import arcgis.modeling.Modeling
     to have this functionality available.
@@ -102,9 +102,7 @@ class ModelingAccessor:
     def enrich(self, enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None,
                country: Country = None) -> pd.DataFrame:
         """
-        Enrich the DataFrame using the provided enrich variable list or data
-        collections list. Either a variable list or list of data
-        collections can be provided, but not both.
+        Enrich the DataFrame using the provided enrich variable list.
 
         Args:
             enrich_variables:
@@ -148,7 +146,7 @@ class ModelingAccessor:
                               (e_vars.name.str.endswith('CY'))]
 
             # enrich the Spatially Enabled DataFrame
-            tae_df = ta_df.dm.enrich(key_vars)
+            ta_df = ta_df.dm.enrich(key_vars)
 
         """
         # prioritize the country parameter
@@ -378,9 +376,8 @@ class Business:
     Just like it sounds, this is a way to search for and find
     businesses of your own brand for analysis, but more importantly
     competitor locations facilitating modeling the effects of
-    competition as well. While the Business object can be instantiated
-    directly, it is much easier to simply instantiate from a Country
-    object instance.
+    competition as well. The business object is accessed as a property
+    of the ModelingAccessor (``df.mdl.business``).
 
     .. code-block:: python
 
@@ -393,9 +390,10 @@ class Business:
         aoi_df = usa.cbsas.get('Seattle')
 
         # get all Ace Hardware locations
-        brnd_df = aoi_df.mdl.business.get_competition('Ace Hardware')
+        brnd_df = aoi_df.mdl.business.get_by_name('Ace Hardware')
 
-        # get all competitors for Ace Hardware in Seattle using the template of the brand dataframe
+        # get all competitors for Ace Hardware in Seattle using the
+        # template of the brand dataframe
         comp_df = aoi_df.mdl.business.get_competition(brnd_df)
 
         # ...or get competitors by using the same search term
@@ -492,7 +490,8 @@ class Business:
             from modeling import Country
 
             # connect to a Web GIS
-            gis = GIS('https://path.to.arcgis.enterprise.com/portal', username='batman', password='P3nnyw0rth!')
+            gis = GIS('https://path.to.arcgis.enterprise.com/portal',
+                      username='batman', password='P3nnyw0rth!')
 
             # create a country object instance
             cntry = Country('USA', source=gis)
@@ -503,15 +502,18 @@ class Business:
             # use this area of interest to get brand locations
             brand_df = aoi_df.mdl.business.get_by_name('Ace Hardware')
 
-            # get competitors and categorize all brands with less than three locations as a local brand
+            # get competitors and categorize all brands with less than
+            # three locations as a local brand
             comp_df = aoi_df.mdl.business.get_competitors(brand_df, local_threshold=3)
 
-            # with hardware stores, each True Value has a unique name, so it helps to rename these to be correctly
-            # recognized as a brand of stores
+            # with hardware stores, each True Value has a unique name,
+            # so it helps to rename these to be correctly recognized
+            # as a brand of stores
             brand_filter = comp_df.brand_name.str.contains(r'TRUE VALUE|TRUE VL', regex=True)
             comp_df.loc[brand_filter, 'brand_name'] = 'TRUE VALUE'
 
-            # now, with the True Values renamed, we need to recalculate which locations are actually local brands
+            # now, with the True Values renamed, we need to recalculate which
+            # locations are actually local brands
             comp_df.mdl.business.calculate_brand_name_category(3, inplace=True)
 
         """
@@ -559,7 +561,8 @@ class Business:
             from modeling import Country
 
             # connect to a Web GIS
-            gis = GIS('https://path.to.arcgis.enterprise.com/portal', username='batman', password='P3nnyw0rth!')
+            gis = GIS('https://path.to.arcgis.enterprise.com/portal',
+                      username='batman', password='P3nnyw0rth!')
 
             # create a country object instance
             cntry = Country('USA', source=gis)
@@ -573,14 +576,16 @@ class Business:
             # get the top NAICS codes
             top_codes = brand_df.mdl.business.get_top_codes()
 
-            # truncate the top code retrieved to widen the scope of codes retrieved - a broader category
+            # truncate the top code retrieved to widen the scope of codes
+            # retrieved - a broader category
             top_code = top_codes.iloc[0]
             naics_code = top_code[:-4]
 
             # use this truncated code to retrieve competitors
             naics_df = aoi_df.mdl.business.get_by_code(naics_code)
 
-            # now, remove the brand locations from the retrieved dataframe to retain just the competition
+            # now, remove the brand locations from the retrieved dataframe
+            # to retain just the competition
             comp_df = naics_df.mdl.business.drop_by_id(brand_df)
 
         """
@@ -625,7 +630,8 @@ class Business:
             from modeling import Country
 
             # connect to a Web GIS
-            gis = GIS('https://path.to.arcgis.enterprise.com/portal', username='batman', password='P3nnyw0rth!')
+            gis = GIS('https://path.to.arcgis.enterprise.com/portal',
+                      username='batman', password='P3nnyw0rth!')
 
             # create a country object instance
             cntry = Country('USA', source=gis)
@@ -639,14 +645,16 @@ class Business:
             # get the top NAICS codes
             top_codes = brand_df.mdl.business.get_top_codes()
 
-            # truncate the top code retrieved to widen the scope of codes retrieved - a broader category
+            # truncate the top code retrieved to widen the scope of codes
+            # retrieved - a broader category
             top_code = top_codes.iloc[0]
             naics_code = top_code[:-2]
 
             # use this truncated code to retrieve competitors
             naics_df = aoi_df.mdl.business.get_by_code(naics_code)
 
-            # now, remove the brand locations from the retrieved dataframe to retain just the competition
+            # now, remove the brand locations from the retrieved dataframe
+            # to retain just the competition
             comp_df = naics_df.mdl.business.drop_by_id(brand_df)
 
         """
