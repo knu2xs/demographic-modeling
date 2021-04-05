@@ -504,7 +504,7 @@ class Business:
 
             # get competitors and categorize all brands with less than
             # three locations as a local brand
-            comp_df = aoi_df.mdl.business.get_competitors(brand_df, local_threshold=3)
+            comp_df = aoi_df.mdl.business.get_competition(brand_df, local_threshold=3)
 
             # with hardware stores, each True Value has a unique name,
             # so it helps to rename these to be correctly recognized
@@ -515,6 +515,18 @@ class Business:
             # now, with the True Values renamed, we need to recalculate which
             # locations are actually local brands
             comp_df.mdl.business.calculate_brand_name_category(3, inplace=True)
+
+        The output of ``comp_df.head()`` from the above sample looks similar to the following.
+
+        ====  =========  ===========================  ===============  ========  ======  =========  ========  ========  ========  ========  =====  =======  ==============================================================================  =============  ======================  =====================
+          ..     LOCNUM  CONAME                       NAICSDESC           NAICS     SIC  SOURCE     PUBPRV    FRNCOD    ISCODE    CITY        ZIP  STATE    SHAPE                                                                             location_id  brand_name              brand_name_category
+        ====  =========  ===========================  ===============  ========  ======  =========  ========  ========  ========  ========  =====  =======  ==============================================================================  =============  ======================  =====================
+           0  002890986  MC LENDON HARDWARE           HARDWARE-RETAIL  44413005  525104  INFOGROUP                                SUMNER    98390  WA       {'x': -122.242365, 'y': 47.2046040000001, 'spatialReference': {'wkid': 4326}}       002890986  MC LENDON HARDWARE      local_brand
+           1  006128854  MCLENDON HARDWARE INC        HARDWARE-RETAIL  44413005  525104  INFOGROUP                                RENTON    98057  WA       {'x': -122.2140195, 'y': 47.477943, 'spatialReference': {'wkid': 4326}}             006128854  MCLENDON HARDWARE INC   MCLENDON HARDWARE INC
+           2  174245191  DUVALL TRUE VALUE HARDWARE   HARDWARE-RETAIL  44413005  525104  INFOGROUP            2                   DUVALL    98019  WA       {'x': -121.9853835, 'y': 47.738907, 'spatialReference': {'wkid': 4326}}             174245191  TRUE VALUE              TRUE VALUE
+           3  174262691  GATEWAY TRUE VALUE HARDWARE  HARDWARE-RETAIL  44413005  525104  INFOGROUP            2                   ENUMCLAW  98022  WA       {'x': -121.9876155, 'y': 47.2019940000001, 'spatialReference': {'wkid': 4326}}      174262691  TRUE VALUE              TRUE VALUE
+           4  174471722  TWEEDY & POPP HARDWARE       HARDWARE-RETAIL  44413005  525104  INFOGROUP            2                   SEATTLE   98103  WA       {'x': -122.3357134, 'y': 47.6612959300001, 'spatialReference': {'wkid': 4326}}      174471722  TWEEDY & POPP HARDWARE  local_brand
+        ====  =========  ===========================  ===============  ========  ======  =========  ========  ========  ========  ========  =====  =======  ==============================================================================  =============  ======================  =====================
 
         """
         # get the dataframe

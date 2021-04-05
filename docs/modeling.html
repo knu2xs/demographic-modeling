@@ -412,7 +412,7 @@ Otherwise, returns None.</p>
 
 <span class="c1"># get competitors and categorize all brands with less than</span>
 <span class="c1"># three locations as a local brand</span>
-<span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competitors</span><span class="p">(</span><span class="n">brand_df</span><span class="p">,</span> <span class="n">local_threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competition</span><span class="p">(</span><span class="n">brand_df</span><span class="p">,</span> <span class="n">local_threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
 <span class="c1"># with hardware stores, each True Value has a unique name,</span>
 <span class="c1"># so it helps to rename these to be correctly recognized</span>
@@ -425,6 +425,140 @@ Otherwise, returns None.</p>
 <span class="n">comp_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">calculate_brand_name_category</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>The output of <code class="docutils literal notranslate"><span class="pre">comp_df.head()</span></code> from the above sample looks similar to the following.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 2%" />
+<col style="width: 4%" />
+<col style="width: 11%" />
+<col style="width: 6%" />
+<col style="width: 3%" />
+<col style="width: 2%" />
+<col style="width: 4%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 2%" />
+<col style="width: 3%" />
+<col style="width: 30%" />
+<col style="width: 5%" />
+<col style="width: 9%" />
+<col style="width: 8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>LOCNUM</p></th>
+<th class="head"><p>CONAME</p></th>
+<th class="head"><p>NAICSDESC</p></th>
+<th class="head"><p>NAICS</p></th>
+<th class="head"><p>SIC</p></th>
+<th class="head"><p>SOURCE</p></th>
+<th class="head"><p>PUBPRV</p></th>
+<th class="head"><p>FRNCOD</p></th>
+<th class="head"><p>ISCODE</p></th>
+<th class="head"><p>CITY</p></th>
+<th class="head"><p>ZIP</p></th>
+<th class="head"><p>STATE</p></th>
+<th class="head"><p>SHAPE</p></th>
+<th class="head"><p>location_id</p></th>
+<th class="head"><p>brand_name</p></th>
+<th class="head"><p>brand_name_category</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>002890986</p></td>
+<td><p>MC LENDON HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td><p>SUMNER</p></td>
+<td><p>98390</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -122.242365, ‘y’: 47.2046040000001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>002890986</p></td>
+<td><p>MC LENDON HARDWARE</p></td>
+<td><p>local_brand</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>006128854</p></td>
+<td><p>MCLENDON HARDWARE INC</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td><p>RENTON</p></td>
+<td><p>98057</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -122.2140195, ‘y’: 47.477943, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>006128854</p></td>
+<td><p>MCLENDON HARDWARE INC</p></td>
+<td><p>MCLENDON HARDWARE INC</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>174245191</p></td>
+<td><p>DUVALL TRUE VALUE HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td><p>2</p></td>
+<td></td>
+<td><p>DUVALL</p></td>
+<td><p>98019</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -121.9853835, ‘y’: 47.738907, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>174245191</p></td>
+<td><p>TRUE VALUE</p></td>
+<td><p>TRUE VALUE</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>174262691</p></td>
+<td><p>GATEWAY TRUE VALUE HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td><p>2</p></td>
+<td></td>
+<td><p>ENUMCLAW</p></td>
+<td><p>98022</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -121.9876155, ‘y’: 47.2019940000001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>174262691</p></td>
+<td><p>TRUE VALUE</p></td>
+<td><p>TRUE VALUE</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>174471722</p></td>
+<td><p>TWEEDY &amp; POPP HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td><p>2</p></td>
+<td></td>
+<td><p>SEATTLE</p></td>
+<td><p>98103</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -122.3357134, ‘y’: 47.6612959300001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>174471722</p></td>
+<td><p>TWEEDY &amp; POPP HARDWARE</p></td>
+<td><p>local_brand</p></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="py method">
