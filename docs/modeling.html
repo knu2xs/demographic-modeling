@@ -417,8 +417,13 @@ Otherwise, returns None.</p>
 <span class="c1"># with hardware stores, each True Value has a unique name,</span>
 <span class="c1"># so it helps to rename these to be correctly recognized</span>
 <span class="c1"># as a brand of stores</span>
-<span class="n">brand_filter</span> <span class="o">=</span> <span class="n">comp_df</span><span class="o">.</span><span class="n">brand_name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;TRUE VALUE|TRUE VL&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">comp_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">brand_filter</span><span class="p">,</span> <span class="s1">&#39;brand_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TRUE VALUE&#39;</span>
+<span class="n">replace_lst</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;TRUE VALUE|TRUE VL&#39;</span><span class="p">,</span> <span class="s1">&#39;TRUE VALUE&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;MC LENDON|MCLENDON&#39;</span><span class="p">,</span> <span class="s1">&#39;MCLENDON HARDWARE&#39;</span><span class="p">)</span>
+<span class="p">]</span>
+<span class="k">for</span> <span class="n">repl</span> <span class="ow">in</span> <span class="n">replace_lst</span><span class="p">:</span>
+    <span class="n">brand_filter</span> <span class="o">=</span> <span class="n">comp_df</span><span class="o">.</span><span class="n">brand_name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">repl</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">comp_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">brand_filter</span><span class="p">,</span> <span class="s1">&#39;brand_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">repl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
 <span class="c1"># now, with the True Values renamed, we need to recalculate which</span>
 <span class="c1"># locations are actually local brands</span>
@@ -482,8 +487,8 @@ Otherwise, returns None.</p>
 <td><p>WA</p></td>
 <td><p>{‘x’: -122.242365, ‘y’: 47.2046040000001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
 <td><p>002890986</p></td>
-<td><p>MC LENDON HARDWARE</p></td>
-<td><p>local_brand</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
 </tr>
 <tr class="row-odd"><td><p>1</p></td>
 <td><p>006128854</p></td>
@@ -500,8 +505,8 @@ Otherwise, returns None.</p>
 <td><p>WA</p></td>
 <td><p>{‘x’: -122.2140195, ‘y’: 47.477943, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
 <td><p>006128854</p></td>
-<td><p>MCLENDON HARDWARE INC</p></td>
-<td><p>MCLENDON HARDWARE INC</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
 </tr>
 <tr class="row-even"><td><p>2</p></td>
 <td><p>174245191</p></td>

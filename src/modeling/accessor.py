@@ -509,8 +509,13 @@ class Business:
             # with hardware stores, each True Value has a unique name,
             # so it helps to rename these to be correctly recognized
             # as a brand of stores
-            brand_filter = comp_df.brand_name.str.contains(r'TRUE VALUE|TRUE VL', regex=True)
-            comp_df.loc[brand_filter, 'brand_name'] = 'TRUE VALUE'
+            replace_lst = [
+                ('TRUE VALUE|TRUE VL', 'TRUE VALUE'),
+                ('MC LENDON|MCLENDON', 'MCLENDON HARDWARE')
+            ]
+            for repl in replace_lst:
+                brand_filter = comp_df.brand_name.str.contains(repl[0], regex=True)
+                comp_df.loc[brand_filter, 'brand_name'] = repl[1]
 
             # now, with the True Values renamed, we need to recalculate which
             # locations are actually local brands
@@ -521,8 +526,8 @@ class Business:
         ====  =========  ===========================  ===============  ========  ======  =========  ========  ========  ========  ========  =====  =======  ==============================================================================  =============  ======================  =====================
           ..     LOCNUM  CONAME                       NAICSDESC           NAICS     SIC  SOURCE     PUBPRV    FRNCOD    ISCODE    CITY        ZIP  STATE    SHAPE                                                                             location_id  brand_name              brand_name_category
         ====  =========  ===========================  ===============  ========  ======  =========  ========  ========  ========  ========  =====  =======  ==============================================================================  =============  ======================  =====================
-           0  002890986  MC LENDON HARDWARE           HARDWARE-RETAIL  44413005  525104  INFOGROUP                                SUMNER    98390  WA       {'x': -122.242365, 'y': 47.2046040000001, 'spatialReference': {'wkid': 4326}}       002890986  MC LENDON HARDWARE      local_brand
-           1  006128854  MCLENDON HARDWARE INC        HARDWARE-RETAIL  44413005  525104  INFOGROUP                                RENTON    98057  WA       {'x': -122.2140195, 'y': 47.477943, 'spatialReference': {'wkid': 4326}}             006128854  MCLENDON HARDWARE INC   MCLENDON HARDWARE INC
+           0  002890986  MC LENDON HARDWARE           HARDWARE-RETAIL  44413005  525104  INFOGROUP                                SUMNER    98390  WA       {'x': -122.242365, 'y': 47.2046040000001, 'spatialReference': {'wkid': 4326}}       002890986  MCLENDON HARDWARE       MCLENDON HARDWARE
+           1  006128854  MCLENDON HARDWARE INC        HARDWARE-RETAIL  44413005  525104  INFOGROUP                                RENTON    98057  WA       {'x': -122.2140195, 'y': 47.477943, 'spatialReference': {'wkid': 4326}}             006128854  MCLENDON HARDWARE       MCLENDON HARDWARE
            2  174245191  DUVALL TRUE VALUE HARDWARE   HARDWARE-RETAIL  44413005  525104  INFOGROUP            2                   DUVALL    98019  WA       {'x': -121.9853835, 'y': 47.738907, 'spatialReference': {'wkid': 4326}}             174245191  TRUE VALUE              TRUE VALUE
            3  174262691  GATEWAY TRUE VALUE HARDWARE  HARDWARE-RETAIL  44413005  525104  INFOGROUP            2                   ENUMCLAW  98022  WA       {'x': -121.9876155, 'y': 47.2019940000001, 'spatialReference': {'wkid': 4326}}      174262691  TRUE VALUE              TRUE VALUE
            4  174471722  TWEEDY & POPP HARDWARE       HARDWARE-RETAIL  44413005  525104  INFOGROUP            2                   SEATTLE   98103  WA       {'x': -122.3357134, 'y': 47.6612959300001, 'spatialReference': {'wkid': 4326}}      174471722  TWEEDY & POPP HARDWARE  local_brand
