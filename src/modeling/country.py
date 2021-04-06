@@ -495,7 +495,7 @@ class Country:
             self._geography_levels = pd.DataFrame(geog['hierarchies'][0]['levels'])
 
             # create the geo_name to use for identifying the levels
-            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().\
+            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower(). \
                 str.replace(' ', '_', regex=False).str.replace('(', '', regex=False).str.replace(')', '', regex=False)
 
             # reverse the sorting so the smallest is at the top
@@ -681,7 +681,7 @@ class Country:
 
         """
         # enrich variable dataframe column names
-        enrich_nm_col, enrich_nmpro_col, enrich_str_col ='name', 'enrich_field_name', 'enrich_name'
+        enrich_nm_col, enrich_nmpro_col, enrich_str_col = 'name', 'enrich_field_name', 'enrich_name'
         col_nm_san, col_pronm_san, col_estr_san = 'nm_san', 'nmpro_san', 'estr_san'
 
         # get shorter version of variable name to work with and also one to modify if necessary
@@ -836,7 +836,9 @@ class Country:
         # get the maximum batch size less one just for good measure
         res = self.source._con.get(
             f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/ServiceLimits')
-        batch_size = [v['value'] for v in res['serviceLimits']['value'] if v['paramName'] == 'maxRecordCount'][0]
+        std_batch_size = [v['value'] for v in res['serviceLimits']['value'] if v['paramName'] == 'maxRecordCount'][0]
+        geom_batch_size = [v['value'] for v in res['serviceLimits']['value']
+                           if v['paramName'] == 'optimalBatchStudyAreasNumber'][0]
 
         # initialize the params for the REST call
         params = {
@@ -845,17 +847,17 @@ class Country:
             'returnGeometry': False  # because we already have the geometry
         }
 
-        # dataframe to store results
-        out_df_lst = []
+        # list to store inputs and results
+        in_req_list, out_df_lst = [], []
 
-        # use the count of features and the max batch size to iteratively enrich the input data
-        for x in range(0, len(data.index), batch_size):
+        # if working with data derived from standard geographies
+        if 'parent_geo' in data.attrs:
 
-            # if working with data derived from standard geographies
-            if 'parent_geo' in data.attrs:
+            # use the count of features and the max batch size to iteratively enrich the input data
+            for x in range(0, len(data.index), std_batch_size):
 
                 # peel off just the id's for this batch
-                id_lst = data.attrs['parent_geo']['id'][x:x + batch_size]
+                id_lst = data.attrs['parent_geo']['id'][x: x + std_batch_size]
 
                 params['studyAreas'] = [{
                     "sourceCountry": data.attrs['parent_geo']['resource'].split('.')[0],
@@ -863,26 +865,39 @@ class Country:
                     "ids": id_lst
                 }]
 
-            # if not standard geographies, working with geometries
-            else:
+                # add the payload onto the list
+                in_req_list.append(params)
 
-                # validate the spatial property
-                assert data.spatial.validate(), 'The input data does not appear to be a valid Spatially Enabled ' \
-                                                'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
+        # if not standard geographies, working with geometries
+        else:
 
-                # get a slice of the input data to enrich for this bitch
-                in_batch_df = data.loc[x:x + batch_size]
+            # validate the spatial property
+            assert data.spatial.name is not None, 'The input data does not appear to be a valid Spatially Enabled ' \
+                                                  'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
+
+            # use the count of features and the max batch size to iteratively enrich the input data
+            for x in range(0, len(data.index), geom_batch_size):
+
+                # get a slice of the input data to enrich for this
+                in_batch_df = data.loc[x: x + geom_batch_size]
 
                 # format the features for sending - keep it light, just the geometry
-                params['studyAreas'] = in_batch_df[in_batch_df.spatial.name].to_frame().spatial.to_featureset().features
+                features = in_batch_df[in_batch_df.spatial.name].to_frame().spatial.to_featureset().features
+                params['studyAreas'] = [f.as_dict for f in features]
 
                 # get the input spatial reference
                 params['insr'] = data.spatial.sr
 
+                # add the payload onto the list
+                in_req_list.append(params)
+
+        # iterate the packaged request payloads
+        for req_params in in_req_list:
+
             # send the request to the server using post because if sending geometry, the message can be big
             r_json = self.source._con.post(
                 f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/Enrich',
-                params=params)
+                params=req_params)
 
             # ensure a valid result is received
             if 'error' in r_json:
@@ -901,10 +916,16 @@ class Country:
             # filter the response dataframe to just enrich columns
             e_df = r_df[e_col_lst]
 
+            # TODO: remove - for debugging...
+            if not e_df.notna().all().all():
+                null_df = e_df
+            else:
+                print('successful iteration')
+
             # add the dataframe to the list
             out_df_lst.append(e_df)
 
-        # add the enrich data onto the original data
+        # combine all the received enriched data and add onto the original data
         enrich_df = pd.concat(out_df_lst).reset_index(drop=True)
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 
