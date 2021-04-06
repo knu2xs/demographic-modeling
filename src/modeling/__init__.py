@@ -1,5 +1,5 @@
 __title__ = 'demographic-modeling-module'
-__version__ = '0.1.0-dev0'
+__version__ = '0.2.0-dev0'
 __author__ = 'Joel McCune'
 __license__ = 'Apache 2.0'
 __copyright__ = 'Copyright 2020 by Joel McCune'
