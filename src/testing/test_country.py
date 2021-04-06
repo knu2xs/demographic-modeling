@@ -223,9 +223,33 @@ def test_enrich_keycy_ent(ent_usa):
     enrich_keycy_test(ent_usa)
 
 
+def enrich_keycy_set_source_test(ba_src: Country):
+    kv = get_key_cy_vars(ba_src)
+    cnty_df = ba_src.cbsas.get('seattle').mdl.counties.get()
+    cnty_df.attrs = {}  # flush the attrs so the ModelingAccessor has no clue
+    enrch_df = cnty_df.mdl.enrich(kv, country=ba_src)
+    assert isinstance(enrch_df, pd.DataFrame)
+
+
+def test_enrich_keycy_set_source_local(local_usa):
+    enrich_keycy_set_source_test(local_usa)
+
+
+def test_enrich_keycy_set_source_ent(ent_usa):
+    enrich_keycy_set_source_test(ent_usa)
+
+
 def test_enrich_keycy_ent_batch(ent_usa):
     kv = get_key_cy_vars(ent_usa)
     cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
+    enrch_df = cnty_df.mdl.enrich(kv)
+    assert isinstance(enrch_df, pd.DataFrame)
+
+
+def test_enrich_keycy_ent_set_source_batch(ent_usa):
+    kv = get_key_cy_vars(ent_usa)
+    cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
+    cnty_df.attrs = {}  # make the ModelingAccessor work for it
     enrch_df = cnty_df.mdl.enrich(kv)
     assert isinstance(enrch_df, pd.DataFrame)
 

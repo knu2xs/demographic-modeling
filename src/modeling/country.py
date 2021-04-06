@@ -346,15 +346,49 @@ class Country:
 
         return mstr_df
 
-    def add_enrich_aliases(self, feature_class: (Path, str)) -> Path:
-        """Add human readable aliases to an enriched feature class.
+    def add_enrich_aliases(self, feature_class: Union[Path, str]) -> Path:
+        """
+        Add human readable aliases to an enriched feature class.
+
+        .. note::
+
+            This function requires ArcPy to be available in the environment, an environment created on a Windows
+            operating system with ArcGIS Pro installed and ArcPy installed in the environment.
 
         Args:
-            feature_class: Path | str
-                Path to the enriched feature class.
+            feature_class: Path to the enriched feature class.
 
-        Returns: Path
+        Returns:
             Path to feature class with aliases added.
+
+        .. code-block:: python
+
+            from modeling import Country
+
+            out_fc_pth = Path(r'C:/path/to/geodatabase.gdb/block_groups')
+
+            # create a country object
+            cntry =  Country('USA')
+
+            # get the current year key variables
+            evars = cntry.enrich_variables
+            key_vars = e_vars[
+                (e_vars.data_collection.str.startswith('Key'))
+                & (e_vars.name.str.endswith('CY'))
+            ]
+
+            # get the block groups for the area of interest
+            bg_df = cntry.cbsas.get('seattle').mdl.block_groups.get()
+
+            # enrich the block groups with the key variables
+            enrich_df = bg_df.mdl.enrich(key_vars)
+
+            # save to a feature class
+            enrich_fc = enrich_df.spatial.to_featureclass(out_fc_pth)
+
+            # finally, add enrich aliases to the output feature class
+            cntry.add_aliases(enrich_fc)
+
         """
         # make sure arcpy is available because we need it
         assert avail_arcpy, 'add_enrich_aliases requires arcpy to be available since working with ArcGIS Feature ' \
@@ -461,7 +495,7 @@ class Country:
             self._geography_levels = pd.DataFrame(geog['hierarchies'][0]['levels'])
 
             # create the geo_name to use for identifying the levels
-            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower().\
+            self._geography_levels['geo_name'] = self._geography_levels['name'].str.lower(). \
                 str.replace(' ', '_', regex=False).str.replace('(', '', regex=False).str.replace(')', '', regex=False)
 
             # reverse the sorting so the smallest is at the top
@@ -482,7 +516,55 @@ class Country:
 
     @property
     def enrich_variables(self):
-        """DataFrame of all the available enrichment variables."""
+        """
+        DataFrame of all the available enrichment variables.
+
+        .. code-block:: python
+
+            from arcgis import GIS
+            from modeling import Country
+
+            # connect to an Enterprise GIS instance with Business Analyst installed
+            gis = GIS('https://mydomain.com/portal', username='geowizard', password='Y3ll0wBr!ck$')
+
+            # create a country to work with
+            cntry = Country('USA')
+
+            # get the available enrich variables as as DataFrame
+            e_vars = usa.enrich_variables
+
+            # filter the variables to just the current year key variables
+            key_vars = e_vars[(e_vars.data_collection.str.startswith('Key')) &
+                              (e_vars.name.str.endswith('CY'))]
+
+        The ``key_vars`` table will look similar to the following.
+
+        ====  ==========  =================================  =================  =====================  =====================  ===============================================  =========  ========
+          ..  name        alias                              data_collection    enrich_name            enrich_field_name      description                                        vintage  units
+        ====  ==========  =================================  =================  =====================  =====================  ===============================================  =========  ========
+           0  TOTPOP_CY   2020 Total Population              KeyUSFacts         KeyUSFacts.TOTPOP_CY   KeyUSFacts_TOTPOP_CY   2020 Total Population (Esri)                          2020  count
+           1  GQPOP_CY    2020 Group Quarters Population     KeyUSFacts         KeyUSFacts.GQPOP_CY    KeyUSFacts_GQPOP_CY    2020 Group Quarters Population (Esri)                 2020  count
+           2  DIVINDX_CY  2020 Diversity Index               KeyUSFacts         KeyUSFacts.DIVINDX_CY  KeyUSFacts_DIVINDX_CY  2020 Diversity Index (Esri)                           2020  count
+           3  TOTHH_CY    2020 Total Households              KeyUSFacts         KeyUSFacts.TOTHH_CY    KeyUSFacts_TOTHH_CY    2020 Total Households (Esri)                          2020  count
+           4  AVGHHSZ_CY  2020 Average Household Size        KeyUSFacts         KeyUSFacts.AVGHHSZ_CY  KeyUSFacts_AVGHHSZ_CY  2020 Average Household Size (Esri)                    2020  count
+           5  MEDHINC_CY  2020 Median Household Income       KeyUSFacts         KeyUSFacts.MEDHINC_CY  KeyUSFacts_MEDHINC_CY  2020 Median Household Income (Esri)                   2020  currency
+           6  AVGHINC_CY  2020 Average Household Income      KeyUSFacts         KeyUSFacts.AVGHINC_CY  KeyUSFacts_AVGHINC_CY  2020 Average Household Income (Esri)                  2020  currency
+           7  PCI_CY      2020 Per Capita Income             KeyUSFacts         KeyUSFacts.PCI_CY      KeyUSFacts_PCI_CY      2020 Per Capita Income (Esri)                         2020  currency
+           8  TOTHU_CY    2020 Total Housing Units           KeyUSFacts         KeyUSFacts.TOTHU_CY    KeyUSFacts_TOTHU_CY    2020 Total Housing Units (Esri)                       2020  count
+           9  OWNER_CY    2020 Owner Occupied HUs            KeyUSFacts         KeyUSFacts.OWNER_CY    KeyUSFacts_OWNER_CY    2020 Owner Occupied Housing Units (Esri)              2020  count
+          10  RENTER_CY   2020 Renter Occupied HUs           KeyUSFacts         KeyUSFacts.RENTER_CY   KeyUSFacts_RENTER_CY   2020 Renter Occupied Housing Units (Esri)             2020  count
+          11  VACANT_CY   2020 Vacant Housing Units          KeyUSFacts         KeyUSFacts.VACANT_CY   KeyUSFacts_VACANT_CY   2020 Vacant Housing Units (Esri)                      2020  count
+          12  MEDVAL_CY   2020 Median Home Value             KeyUSFacts         KeyUSFacts.MEDVAL_CY   KeyUSFacts_MEDVAL_CY   2020 Median Home Value (Esri)                         2020  currency
+          13  AVGVAL_CY   2020 Average Home Value            KeyUSFacts         KeyUSFacts.AVGVAL_CY   KeyUSFacts_AVGVAL_CY   2020 Average Home Value (Esri)                        2020  currency
+          14  POPGRW10CY  2010-2020 Growth Rate: Population  KeyUSFacts         KeyUSFacts.POPGRW10CY  KeyUSFacts_POPGRW10CY  2010-2020 Population: Annual Growth Rate (Esri)       2020  pct
+          15  HHGRW10CY   2010-2020 Growth Rate: Households  KeyUSFacts         KeyUSFacts.HHGRW10CY   KeyUSFacts_HHGRW10CY   2010-2020 Households: Annual Growth Rate (Esri)       2020  pct
+          16  FAMGRW10CY  2010-2020 Growth Rate: Families    KeyUSFacts         KeyUSFacts.FAMGRW10CY  KeyUSFacts_FAMGRW10CY  2010-2020 Families: Annual Growth Rate (Esri)         2020  pct
+          17  DPOP_CY     2020 Total Daytime Population      KeyUSFacts         KeyUSFacts.DPOP_CY     KeyUSFacts_DPOP_CY     2020 Total Daytime Population (Esri)                  2020  count
+          18  DPOPWRK_CY  2020 Daytime Pop: Workers          KeyUSFacts         KeyUSFacts.DPOPWRK_CY  KeyUSFacts_DPOPWRK_CY  2020 Daytime Population: Workers (Esri)               2020  count
+          19  DPOPRES_CY  2020 Daytime Pop: Residents        KeyUSFacts         KeyUSFacts.DPOPRES_CY  KeyUSFacts_DPOPRES_CY  2020 Daytime Population: Residents (Esri)             2020  count
+        ====  ==========  =================================  =================  =====================  =====================  ===============================================  =========  ========
+
+        """
         if self._enrich_variables is None and self.source == 'local':
             self._enrich_variables = self._enrich_variables_local
 
@@ -569,9 +651,37 @@ class Country:
 
         Returns:
             Pandas DataFrame of enrich variables with the different available aliases.
+
+        .. code-block:: python
+
+            from pathlib import Path
+
+            import arcpy
+            from arcgis import Country
+
+            # path to previously enriched data
+            enriched_fc_pth = Path(r'C:/path/to/geodatabase.gdb/enriched_data')
+            new_fc_pth = Path(r'C:/path/to/geodatabase.gdb/block_groups_pdx')
+
+            # get a list of column names from previously enriched data
+            attr_lst = [c.name for c in arcpy.ListFields(str(enriched_fc_pth))
+
+            # get a country to work in
+            cntry = Country('USA', source='local')
+
+            # get dataframe of variables used for previously enriched data
+            enrich_vars = cntry.get_enrich_variables_dataframe_from_variable_list(attr_lst)
+
+            # enrich block groups in new area of interest using the same variables
+            enrich_df = cntry.cbsas.get('portland-vancouver').mdl.block_groups.get().mdl.enrich(enrich_vars)
+
+            # save the new data and add aliases
+            enrich_df.spatial.to_featureclass(new_fc_pth)
+            cntry.add_enrich_aliases(new_fc_pth)
+
         """
         # enrich variable dataframe column names
-        enrich_nm_col, enrich_nmpro_col, enrich_str_col ='name', 'enrich_field_name', 'enrich_name'
+        enrich_nm_col, enrich_nmpro_col, enrich_str_col = 'name', 'enrich_field_name', 'enrich_name'
         col_nm_san, col_pronm_san, col_estr_san = 'nm_san', 'nmpro_san', 'estr_san'
 
         # get shorter version of variable name to work with and also one to modify if necessary
@@ -726,7 +836,9 @@ class Country:
         # get the maximum batch size less one just for good measure
         res = self.source._con.get(
             f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/ServiceLimits')
-        batch_size = [v['value'] for v in res['serviceLimits']['value'] if v['paramName'] == 'maxRecordCount'][0]
+        std_batch_size = [v['value'] for v in res['serviceLimits']['value'] if v['paramName'] == 'maxRecordCount'][0]
+        geom_batch_size = [v['value'] for v in res['serviceLimits']['value']
+                           if v['paramName'] == 'optimalBatchStudyAreasNumber'][0]
 
         # initialize the params for the REST call
         params = {
@@ -735,17 +847,17 @@ class Country:
             'returnGeometry': False  # because we already have the geometry
         }
 
-        # dataframe to store results
-        out_df_lst = []
+        # list to store inputs and results
+        in_req_list, out_df_lst = [], []
 
-        # use the count of features and the max batch size to iteratively enrich the input data
-        for x in range(0, len(data.index), batch_size):
+        # if working with data derived from standard geographies
+        if 'parent_geo' in data.attrs:
 
-            # if working with data derived from standard geographies
-            if 'parent_geo' in data.attrs:
+            # use the count of features and the max batch size to iteratively enrich the input data
+            for x in range(0, len(data.index), std_batch_size):
 
                 # peel off just the id's for this batch
-                id_lst = data.attrs['parent_geo']['id'][x:x + batch_size]
+                id_lst = data.attrs['parent_geo']['id'][x: x + std_batch_size]
 
                 params['studyAreas'] = [{
                     "sourceCountry": data.attrs['parent_geo']['resource'].split('.')[0],
@@ -753,26 +865,39 @@ class Country:
                     "ids": id_lst
                 }]
 
-            # if not standard geographies, working with geometries
-            else:
+                # add the payload onto the list
+                in_req_list.append(params)
 
-                # validate the spatial property
-                assert data.spatial.validate(), 'The input data does not appear to be a valid Spatially Enabled ' \
-                                                'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
+        # if not standard geographies, working with geometries
+        else:
 
-                # get a slice of the input data to enrich for this bitch
-                in_batch_df = data.loc[x:x + batch_size]
+            # validate the spatial property
+            assert data.spatial.name is not None, 'The input data does not appear to be a valid Spatially Enabled ' \
+                                                  'DataFrame. Possibly try df.spatial.set_geometry("SHAPE") to rectify.'
+
+            # use the count of features and the max batch size to iteratively enrich the input data
+            for x in range(0, len(data.index), geom_batch_size):
+
+                # get a slice of the input data to enrich for this
+                in_batch_df = data.loc[x: x + geom_batch_size]
 
                 # format the features for sending - keep it light, just the geometry
-                params['studyAreas'] = in_batch_df[in_batch_df.spatial.name].to_frame().spatial.to_featureset().features
+                features = in_batch_df[in_batch_df.spatial.name].to_frame().spatial.to_featureset().features
+                params['studyAreas'] = [f.as_dict for f in features]
 
                 # get the input spatial reference
                 params['insr'] = data.spatial.sr
 
+                # add the payload onto the list
+                in_req_list.append(params)
+
+        # iterate the packaged request payloads
+        for req_params in in_req_list:
+
             # send the request to the server using post because if sending geometry, the message can be big
             r_json = self.source._con.post(
                 f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/Enrich',
-                params=params)
+                params=req_params)
 
             # ensure a valid result is received
             if 'error' in r_json:
@@ -791,10 +916,16 @@ class Country:
             # filter the response dataframe to just enrich columns
             e_df = r_df[e_col_lst]
 
+            # TODO: remove - for debugging...
+            if not e_df.notna().all().all():
+                null_df = e_df
+            else:
+                print('successful iteration')
+
             # add the dataframe to the list
             out_df_lst.append(e_df)
 
-        # add the enrich data onto the original data
+        # combine all the received enriched data and add onto the original data
         enrich_df = pd.concat(out_df_lst).reset_index(drop=True)
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 

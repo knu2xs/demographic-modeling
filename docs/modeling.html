@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Country &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
+  <title>ModelingAccessor (mdl) &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
   
 
   
@@ -87,9 +87,9 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Configuration</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Country</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#modelingaccessor-mdl-pandas-dataframe-accessor">ModelingAccessor (<cite>mdl</cite>) Pandas DataFrame Accessor</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ModelingAccessor (<code class="docutils literal notranslate"><span class="pre">mdl</span></code>)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#business">Business</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#country">Country</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modeling.utils.html">modeling.utils module</a></li>
 </ul>
 
@@ -139,7 +139,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Country</li>
+      <li>ModelingAccessor (<code class="docutils literal notranslate"><span class="pre">mdl</span></code>)</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -158,210 +158,12 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="country">
-<h1>Country<a class="headerlink" href="#country" title="Permalink to this headline">¶</a></h1>
-<p>The country object is the foundational building block for
-working with demographic data. This is due to data collection,
-aggregation and dissemination methods.</p>
-<dl class="py class">
-<dt id="modeling.Country">
-<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">modeling.</span></code><code class="sig-name descname"><span class="pre">Country</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country" title="Permalink to this definition">¶</a></dt>
-<dd><p>Country objects are instantiated by providing the three letter country identifier
-and optionally also specifying the source. If the source is not explicitly specified
-Country will use local resources if the environment is part of an ArcGIS Pro
-installation with Business Analyst enabled and local data installed. If this is not
-the case, Country will then attempt to use the active GIS object instance if available.
-Also, if a GIS object is explicitly passed in, this will be used.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Three letter country identifier.</p></li>
-<li><p><strong>source</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">GIS</span></code>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]) – Optional ‘local’ or a GIS object instance referencing an ArcGIS Enterprise
-instance with enrichment configured or ArcGIS Online. If not explicitly
-specified, will attempt to use locally installed data with Pro and Business
-analyst first. If this is not available, will look for an active GIS. If
-no active GIS, a GIS object will need to be explicitly provided with
-permissions to perform enrichment.</p></li>
-<li><p><strong>year</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]) – Optional and only applicable if using local data. In cases where models
-have been developed against a specific vintage (year) of data, this affords the
-ability to enrich data for this specific year to support these models.</p></li>
-</ul>
-</dd>
-</dl>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">arcgis.modeling</span> <span class="kn">import</span> <span class="n">Country</span>
-
-<span class="c1"># instantiate a country</span>
-<span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">)</span>
-
-<span class="c1"># get the seattle CBSA as a study area</span>
-<span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
-
-<span class="c1"># use the Modeling DataFrame accessor to retrieve the block groups in seattle</span>
-<span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-
-<span class="c1"># get the available enrich variables as as DataFrame</span>
-<span class="n">e_vars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
-
-<span class="c1"># filter the variables to just the current year key variables</span>
-<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span> <span class="o">&amp;</span>
-                  <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
-
-<span class="c1"># enrich the data through the Modeling DataFrame accessor</span>
-<span class="n">e_df</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="py method">
-<dt id="modeling.Country.add_enrich_aliases">
-<code class="sig-name descname"><span class="pre">add_enrich_aliases</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">feature_class</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.add_enrich_aliases" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add human readable aliases to an enriched feature class.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>feature_class</strong> (<em>(</em><em>&lt;class 'pathlib.Path'&gt;</em><em>, </em><em>&lt;class 'str'&gt;</em><em>)</em>) – Path | str
-Path to the enriched feature class.</p>
-</dd>
-</dl>
-<dl class="simple">
-<dt>Returns: Path</dt><dd><p>Path to feature class with aliases added.</p>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.enrich">
-<code class="sig-name descname"><span class="pre">enrich</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enrich_variables</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.enrich" title="Permalink to this definition">¶</a></dt>
-<dd><p>Enrich a spatially enabled dataframe using either a enrichment
-variables defined using a Python List, NumPy Array or Pandas
-Series of enrich names. Also, a filtered enrich variables Pandas
-DataFrame can also be used.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>) – Spatially Enabled DataFrame with geography_levels to be
-enriched.</p></li>
-<li><p><strong>enrich_variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">array</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>]) – Optional iterable of enrich variables to use for
-enriching data. Filtered output from
-Country.enrich_variables can also be used.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
-</dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Spatially Enabled DataFrame with enriched data added.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.enrich_variables">
-<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">enrich_variables</span></code><a class="headerlink" href="#modeling.Country.enrich_variables" title="Permalink to this definition">¶</a></dt>
-<dd><p>DataFrame of all the available enrichment variables.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.geography_levels">
-<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">geography_levels</span></code><a class="headerlink" href="#modeling.Country.geography_levels" title="Permalink to this definition">¶</a></dt>
-<dd><p>DataFrame of available geography levels.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.get_enrich_variables_dataframe_from_variable_list">
-<code class="sig-name descname"><span class="pre">get_enrich_variables_dataframe_from_variable_list</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enrich_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_duplicates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.get_enrich_variables_dataframe_from_variable_list" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get a dataframe of enrich variables associated with the list of variables
-passed in. This is especially useful when needing aliases (<em>human readable
-names</em>), or are interested in enriching more data using previously enriched
-data as a template.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>enrich_variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>]) – Iterable (normally a list) of variables correlating to
-enrichment variables. These variable names can be simply the name, the
-name prefixed by the collection separated by a dot, or the output from
-enrichment in ArcGIS Pro with the field name modified to fit field naming
-and length constraints.</p></li>
-<li><p><strong>drop_duplicates</strong> – Optional boolean (default True) indicating whether to drop
-duplicates. Since the same variables appear in multiple data collections,
-multiple instances of the same variable can be found. Dropping duplicates
-removes redundant matches.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
-</dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Pandas DataFrame of enrich variables with the different available aliases.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.level">
-<code class="sig-name descname"><span class="pre">level</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geography_index</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.level" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get an available <code class="docutils literal notranslate"><span class="pre">geography_level</span></code> in the country.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>geography_index</strong> (<em>(</em><em>&lt;class 'str'&gt;</em><em>, </em><em>&lt;class 'int'&gt;</em><em>)</em>) – Either the geographic_level geo_name or the
-index of the geography_level level. This can be discovered
-using the <code class="docutils literal notranslate"><span class="pre">Country.geography_levels</span></code> method.</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
-</dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Spatially Enabled DataFrame of the requested geography_level with
-the Modeling accessor properties initialized.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.levels">
-<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">levels</span></code><a class="headerlink" href="#modeling.Country.levels" title="Permalink to this definition">¶</a></dt>
-<dd><p>Dataframe of available geography levels. (Alias of geography_levels.)</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.verify_can_enrich">
-<code class="sig-name descname"><span class="pre">verify_can_enrich</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.verify_can_enrich" title="Permalink to this definition">¶</a></dt>
-<dd><p>If the country enrich instance can enrich based on the permissions. Only relevant if source is a GIS
-instance.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.Country.verify_can_perform_network_analysis">
-<code class="sig-name descname"><span class="pre">verify_can_perform_network_analysis</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.verify_can_perform_network_analysis" title="Permalink to this definition">¶</a></dt>
-<dd><p>If the country enrich instance can perform transportation network analysis based on permissions. Only
-relevant if the source is a GIS instance.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>network_function</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Optional string describing specific network function to check for. Valid values include
-‘closestfacility’, ‘locationallocation’, ‘optimizedrouting’, ‘origindestinationcostmatrix’, ‘routing’,
-‘servicearea’, or ‘vehiclerouting’.</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
-</dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>Boolean indicating if the country instance, based on permissions, has network analysis privileges.</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-</div>
-<div class="section" id="modelingaccessor-mdl-pandas-dataframe-accessor">
-<h1>ModelingAccessor (<cite>mdl</cite>) Pandas DataFrame Accessor<a class="headerlink" href="#modelingaccessor-mdl-pandas-dataframe-accessor" title="Permalink to this headline">¶</a></h1>
-<p>Besides the Country object, the DemographicModeling object, a Pandas
-DataFrame Accessor, likely is going to be one of the most often used
-objects in this package. The DemograhpicModeling object rarely, if ever,
-is created directly. Rather, it is accessed as a property of a Spatially
-Enabled DataFrame</p>
+  <div class="section" id="modelingaccessor-mdl">
+<h1>ModelingAccessor (<code class="docutils literal notranslate"><span class="pre">mdl</span></code>)<a class="headerlink" href="#modelingaccessor-mdl" title="Permalink to this headline">¶</a></h1>
+<p>The DemographicModeling object, a Pandas DataFrame Accessor, likely is
+going to be one of the most often used objects in this package. The
+ModelingAccessor object is rarely, if ever, created directly. Rather,
+it is accessed as a property of a Spatially Enabled DataFrame.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># start by creating a country object instance</span>
@@ -375,8 +177,10 @@ Enabled DataFrame</p>
 
 <span class="c1"># get current year key variables for enrichment</span>
 <span class="n">e_vars</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">enrich_variables</span>
-<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span>
-                 <span class="o">&amp;</span> <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[</span>
+    <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))</span>
+<span class="p">]</span>
 
 <span class="c1"># use the DemographicModeling accessor to now enrich the block groups</span>
 <span class="n">enrich_df</span> <span class="o">=</span> <span class="n">ta_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
@@ -387,16 +191,14 @@ Enabled DataFrame</p>
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">modeling.</span></code><code class="sig-name descname"><span class="pre">ModelingAccessor</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.ModelingAccessor" title="Permalink to this definition">¶</a></dt>
 <dd><p>The ModelingAccessor is a Pandas DataFrame accessor, a standalone namespace for
 accessing geographic modeling functionality. If the DataFrame was created using
-a Country object, then the Modeling (<code class="docutils literal notranslate"><span class="pre">modeling</span></code>) namespace will automatically
+a Country object, then the Modeling (<code class="docutils literal notranslate"><span class="pre">mdl</span></code>) namespace will automatically
 be available. However, if you want to use this functionality, and have not created
 the DataFrame using the Country object, you must import arcgis.modeling.Modeling
 to have this functionality available.</p>
 <dl class="py method">
 <dt id="modeling.ModelingAccessor.enrich">
 <code class="sig-name descname"><span class="pre">enrich</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enrich_variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.ModelingAccessor.enrich" title="Permalink to this definition">¶</a></dt>
-<dd><p>Enrich the DataFrame using the provided enrich variable list or data
-collections list. Either a variable list or list of data
-collections can be provided, but not both.</p>
+<dd><p>Enrich the DataFrame using the provided enrich variable list.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -443,40 +245,7 @@ using this package’s introspection methods.</p></li>
                   <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
 
 <span class="c1"># enrich the Spatially Enabled DataFrame</span>
-<span class="n">tae_df</span> <span class="o">=</span> <span class="n">ta_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt id="modeling.ModelingAccessor.get_level">
-<code class="sig-name descname"><span class="pre">get_level</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geographic_level</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.ModelingAccessor.get_level" title="Permalink to this definition">¶</a></dt>
-<dd><p>Retrieve a Spatially Enabled DataFrame of geometries corresponding
-to the index returned by the Country.geography_levels property. This is
-most useful when retrieving the lowest, most granular, level of
-geography within a country.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>geographic_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Integer referencing the index of the geographic level desired.</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">GeographyLevel</span></code></p>
-</dd>
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>GeographyLevel object instance</p>
-</dd>
-</dl>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
-
-<span class="c1"># create an instance of the country object</span>
-<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
-
-<span class="c1"># the get function returns a dataframe with the &#39;dm&#39; property</span>
-<span class="n">metro_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
-
-<span class="c1"># level returns a CountryLevel object enabling getting all geography_levels</span>
-<span class="c1"># falling within the parent dataframe</span>
-<span class="n">lvl_df</span> <span class="o">=</span> <span class="n">metro_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">level</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+<span class="n">ta_df</span> <span class="o">=</span> <span class="n">ta_df</span><span class="o">.</span><span class="n">dm</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -522,6 +291,39 @@ each nth destinations.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt id="modeling.ModelingAccessor.level">
+<code class="sig-name descname"><span class="pre">level</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geographic_level</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.ModelingAccessor.level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve a Spatially Enabled DataFrame of geometries corresponding
+to the index returned by the Country.geography_levels property. This is
+most useful when retrieving the lowest, most granular, level of
+geography within a country.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>geographic_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>) – Integer referencing the index of the geographic level desired.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">GeographyLevel</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>GeographyLevel object instance</p>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
+
+<span class="c1"># create an instance of the country object</span>
+<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+
+<span class="c1"># the get function returns a dataframe with the &#39;dm&#39; property</span>
+<span class="n">metro_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
+
+<span class="c1"># level returns a CountryLevel object enabling getting all geography_levels</span>
+<span class="c1"># falling within the parent dataframe</span>
+<span class="n">lvl_df</span> <span class="o">=</span> <span class="n">metro_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">level</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt id="modeling.ModelingAccessor.project">
 <code class="sig-name descname"><span class="pre">project</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_spatial_reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4326</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.ModelingAccessor.project" title="Permalink to this definition">¶</a></dt>
 <dd><p>Project to a new spatial reference, applying an applicable transformation if necessary.</p>
@@ -546,9 +348,8 @@ each nth destinations.</p>
 <dd><p>Just like it sounds, this is a way to search for and find
 businesses of your own brand for analysis, but more importantly
 competitor locations facilitating modeling the effects of
-competition as well. While the Business object can be instantiated
-directly, it is much easier to simply instantiate from a Country
-object instance.</p>
+competition as well. The business object is accessed as a property
+of the ModelingAccessor (<code class="docutils literal notranslate"><span class="pre">df.mdl.business</span></code>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># start by creating a country object instance</span>
@@ -558,9 +359,10 @@ object instance.</p>
 <span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Seattle&#39;</span><span class="p">)</span>
 
 <span class="c1"># get all Ace Hardware locations</span>
-<span class="n">brnd_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competition</span><span class="p">(</span><span class="s1">&#39;Ace Hardware&#39;</span><span class="p">)</span>
+<span class="n">brnd_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_by_name</span><span class="p">(</span><span class="s1">&#39;Ace Hardware&#39;</span><span class="p">)</span>
 
-<span class="c1"># get all competitors for Ace Hardware in Seattle using the template of the brand dataframe</span>
+<span class="c1"># get all competitors for Ace Hardware in Seattle using the</span>
+<span class="c1"># template of the brand dataframe</span>
 <span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competition</span><span class="p">(</span><span class="n">brnd_df</span><span class="p">)</span>
 
 <span class="c1"># ...or get competitors by using the same search term</span>
@@ -596,7 +398,8 @@ Otherwise, returns None.</p>
 <span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># connect to a Web GIS</span>
-<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
+<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span>
+          <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
 
 <span class="c1"># create a country object instance</span>
 <span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">gis</span><span class="p">)</span>
@@ -607,18 +410,160 @@ Otherwise, returns None.</p>
 <span class="c1"># use this area of interest to get brand locations</span>
 <span class="n">brand_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_by_name</span><span class="p">(</span><span class="s1">&#39;Ace Hardware&#39;</span><span class="p">)</span>
 
-<span class="c1"># get competitors and categorize all brands with less than three locations as a local brand</span>
-<span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competitors</span><span class="p">(</span><span class="n">brand_df</span><span class="p">,</span> <span class="n">local_threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="c1"># get competitors and categorize all brands with less than</span>
+<span class="c1"># three locations as a local brand</span>
+<span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competition</span><span class="p">(</span><span class="n">brand_df</span><span class="p">,</span> <span class="n">local_threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
 
-<span class="c1"># with hardware stores, each True Value has a unique name, so it helps to rename these to be correctly</span>
-<span class="c1"># recognized as a brand of stores</span>
-<span class="n">brand_filter</span> <span class="o">=</span> <span class="n">comp_df</span><span class="o">.</span><span class="n">brand_name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;TRUE VALUE|TRUE VL&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">comp_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">brand_filter</span><span class="p">,</span> <span class="s1">&#39;brand_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TRUE VALUE&#39;</span>
+<span class="c1"># with hardware stores, each True Value has a unique name,</span>
+<span class="c1"># so it helps to rename these to be correctly recognized</span>
+<span class="c1"># as a brand of stores</span>
+<span class="n">replace_lst</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;TRUE VALUE|TRUE VL&#39;</span><span class="p">,</span> <span class="s1">&#39;TRUE VALUE&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;MC LENDON|MCLENDON&#39;</span><span class="p">,</span> <span class="s1">&#39;MCLENDON HARDWARE&#39;</span><span class="p">)</span>
+<span class="p">]</span>
+<span class="k">for</span> <span class="n">repl</span> <span class="ow">in</span> <span class="n">replace_lst</span><span class="p">:</span>
+    <span class="n">brand_filter</span> <span class="o">=</span> <span class="n">comp_df</span><span class="o">.</span><span class="n">brand_name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">repl</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">comp_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">brand_filter</span><span class="p">,</span> <span class="s1">&#39;brand_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">repl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
-<span class="c1"># now, with the True Values renamed, we need to recalculate which locations are actually local brands</span>
+<span class="c1"># now, with the True Values renamed, we need to recalculate which</span>
+<span class="c1"># locations are actually local brands</span>
 <span class="n">comp_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">calculate_brand_name_category</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>The output of <code class="docutils literal notranslate"><span class="pre">comp_df.head()</span></code> from the above sample looks similar to the following.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 2%" />
+<col style="width: 4%" />
+<col style="width: 11%" />
+<col style="width: 6%" />
+<col style="width: 3%" />
+<col style="width: 2%" />
+<col style="width: 4%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 3%" />
+<col style="width: 2%" />
+<col style="width: 3%" />
+<col style="width: 30%" />
+<col style="width: 5%" />
+<col style="width: 9%" />
+<col style="width: 8%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>LOCNUM</p></th>
+<th class="head"><p>CONAME</p></th>
+<th class="head"><p>NAICSDESC</p></th>
+<th class="head"><p>NAICS</p></th>
+<th class="head"><p>SIC</p></th>
+<th class="head"><p>SOURCE</p></th>
+<th class="head"><p>PUBPRV</p></th>
+<th class="head"><p>FRNCOD</p></th>
+<th class="head"><p>ISCODE</p></th>
+<th class="head"><p>CITY</p></th>
+<th class="head"><p>ZIP</p></th>
+<th class="head"><p>STATE</p></th>
+<th class="head"><p>SHAPE</p></th>
+<th class="head"><p>location_id</p></th>
+<th class="head"><p>brand_name</p></th>
+<th class="head"><p>brand_name_category</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>002890986</p></td>
+<td><p>MC LENDON HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td><p>SUMNER</p></td>
+<td><p>98390</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -122.242365, ‘y’: 47.2046040000001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>002890986</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>006128854</p></td>
+<td><p>MCLENDON HARDWARE INC</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td></td>
+<td></td>
+<td><p>RENTON</p></td>
+<td><p>98057</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -122.2140195, ‘y’: 47.477943, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>006128854</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
+<td><p>MCLENDON HARDWARE</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>174245191</p></td>
+<td><p>DUVALL TRUE VALUE HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td><p>2</p></td>
+<td></td>
+<td><p>DUVALL</p></td>
+<td><p>98019</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -121.9853835, ‘y’: 47.738907, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>174245191</p></td>
+<td><p>TRUE VALUE</p></td>
+<td><p>TRUE VALUE</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>174262691</p></td>
+<td><p>GATEWAY TRUE VALUE HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td><p>2</p></td>
+<td></td>
+<td><p>ENUMCLAW</p></td>
+<td><p>98022</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -121.9876155, ‘y’: 47.2019940000001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>174262691</p></td>
+<td><p>TRUE VALUE</p></td>
+<td><p>TRUE VALUE</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>174471722</p></td>
+<td><p>TWEEDY &amp; POPP HARDWARE</p></td>
+<td><p>HARDWARE-RETAIL</p></td>
+<td><p>44413005</p></td>
+<td><p>525104</p></td>
+<td><p>INFOGROUP</p></td>
+<td></td>
+<td><p>2</p></td>
+<td></td>
+<td><p>SEATTLE</p></td>
+<td><p>98103</p></td>
+<td><p>WA</p></td>
+<td><p>{‘x’: -122.3357134, ‘y’: 47.6612959300001, ‘spatialReference’: {‘wkid’: 4326}}</p></td>
+<td><p>174471722</p></td>
+<td><p>TWEEDY &amp; POPP HARDWARE</p></td>
+<td><p>local_brand</p></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="py method">
@@ -648,7 +593,8 @@ rows to drop or retain. Default is ‘location_id’.</p></li>
 <span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># connect to a Web GIS</span>
-<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
+<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span>
+          <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
 
 <span class="c1"># create a country object instance</span>
 <span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">gis</span><span class="p">)</span>
@@ -662,14 +608,16 @@ rows to drop or retain. Default is ‘location_id’.</p></li>
 <span class="c1"># get the top NAICS codes</span>
 <span class="n">top_codes</span> <span class="o">=</span> <span class="n">brand_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_top_codes</span><span class="p">()</span>
 
-<span class="c1"># truncate the top code retrieved to widen the scope of codes retrieved - a broader category</span>
+<span class="c1"># truncate the top code retrieved to widen the scope of codes</span>
+<span class="c1"># retrieved - a broader category</span>
 <span class="n">top_code</span> <span class="o">=</span> <span class="n">top_codes</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">naics_code</span> <span class="o">=</span> <span class="n">top_code</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span>
 
 <span class="c1"># use this truncated code to retrieve competitors</span>
 <span class="n">naics_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_by_code</span><span class="p">(</span><span class="n">naics_code</span><span class="p">)</span>
 
-<span class="c1"># now, remove the brand locations from the retrieved dataframe to retain just the competition</span>
+<span class="c1"># now, remove the brand locations from the retrieved dataframe</span>
+<span class="c1"># to retain just the competition</span>
 <span class="n">comp_df</span> <span class="o">=</span> <span class="n">naics_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">drop_by_id</span><span class="p">(</span><span class="n">brand_df</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -824,7 +772,8 @@ be sampled to return the industry code values identifying the locations.</p></li
 <span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># connect to a Web GIS</span>
-<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
+<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://path.to.arcgis.enterprise.com/portal&#39;</span><span class="p">,</span>
+          <span class="n">username</span><span class="o">=</span><span class="s1">&#39;batman&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;P3nnyw0rth!&#39;</span><span class="p">)</span>
 
 <span class="c1"># create a country object instance</span>
 <span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">gis</span><span class="p">)</span>
@@ -838,17 +787,515 @@ be sampled to return the industry code values identifying the locations.</p></li
 <span class="c1"># get the top NAICS codes</span>
 <span class="n">top_codes</span> <span class="o">=</span> <span class="n">brand_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_top_codes</span><span class="p">()</span>
 
-<span class="c1"># truncate the top code retrieved to widen the scope of codes retrieved - a broader category</span>
+<span class="c1"># truncate the top code retrieved to widen the scope of codes</span>
+<span class="c1"># retrieved - a broader category</span>
 <span class="n">top_code</span> <span class="o">=</span> <span class="n">top_codes</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">naics_code</span> <span class="o">=</span> <span class="n">top_code</span><span class="p">[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
 
 <span class="c1"># use this truncated code to retrieve competitors</span>
 <span class="n">naics_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_by_code</span><span class="p">(</span><span class="n">naics_code</span><span class="p">)</span>
 
-<span class="c1"># now, remove the brand locations from the retrieved dataframe to retain just the competition</span>
+<span class="c1"># now, remove the brand locations from the retrieved dataframe</span>
+<span class="c1"># to retain just the competition</span>
 <span class="n">comp_df</span> <span class="o">=</span> <span class="n">naics_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">drop_by_id</span><span class="p">(</span><span class="n">brand_df</span><span class="p">)</span>
 </pre></div>
 </div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="country">
+<h1>Country<a class="headerlink" href="#country" title="Permalink to this headline">¶</a></h1>
+<p>The country object is the foundational building block for
+working with demographic data. This is due to data collection,
+aggregation and dissemination methods.</p>
+<dl class="py class">
+<dt id="modeling.Country">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">modeling.</span></code><code class="sig-name descname"><span class="pre">Country</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country" title="Permalink to this definition">¶</a></dt>
+<dd><p>Country objects are instantiated by providing the three letter country identifier
+and optionally also specifying the source. If the source is not explicitly specified
+Country will use local resources if the environment is part of an ArcGIS Pro
+installation with Business Analyst enabled and local data installed. If this is not
+the case, Country will then attempt to use the active GIS object instance if available.
+Also, if a GIS object is explicitly passed in, this will be used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>) – Three letter country identifier.</p></li>
+<li><p><strong>source</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">GIS</span></code>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]) – Optional ‘local’ or a GIS object instance referencing an ArcGIS Enterprise
+instance with enrichment configured or ArcGIS Online. If not explicitly
+specified, will attempt to use locally installed data with Pro and Business
+analyst first. If this is not available, will look for an active GIS. If
+no active GIS, a GIS object will need to be explicitly provided with
+permissions to perform enrichment.</p></li>
+<li><p><strong>year</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]) – Optional and only applicable if using local data. In cases where models
+have been developed against a specific vintage (year) of data, this affords the
+ability to enrich data for this specific year to support these models.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">arcgis.modeling</span> <span class="kn">import</span> <span class="n">Country</span>
+
+<span class="c1"># instantiate a country</span>
+<span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">)</span>
+
+<span class="c1"># get the seattle CBSA as a study area</span>
+<span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
+
+<span class="c1"># use the Modeling DataFrame accessor to retrieve the block groups in seattle</span>
+<span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+<span class="c1"># get the available enrich variables as as DataFrame</span>
+<span class="n">e_vars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
+
+<span class="c1"># filter the variables to just the current year key variables</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span> <span class="o">&amp;</span>
+                  <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
+
+<span class="c1"># enrich the data through the Modeling DataFrame accessor</span>
+<span class="n">e_df</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt id="modeling.Country.add_enrich_aliases">
+<code class="sig-name descname"><span class="pre">add_enrich_aliases</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">feature_class</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.add_enrich_aliases" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add human readable aliases to an enriched feature class.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function requires ArcPy to be available in the environment, an environment created on a Windows
+operating system with ArcGIS Pro installed and ArcPy installed in the environment.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>feature_class</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Path to the enriched feature class.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Path to feature class with aliases added.</p>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
+
+<span class="n">out_fc_pth</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;C:/path/to/geodatabase.gdb/block_groups&#39;</span><span class="p">)</span>
+
+<span class="c1"># create a country object</span>
+<span class="n">cntry</span> <span class="o">=</span>  <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+
+<span class="c1"># get the current year key variables</span>
+<span class="n">evars</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">enrich_variables</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[</span>
+    <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))</span>
+<span class="p">]</span>
+
+<span class="c1"># get the block groups for the area of interest</span>
+<span class="n">bg_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+<span class="c1"># enrich the block groups with the key variables</span>
+<span class="n">enrich_df</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+
+<span class="c1"># save to a feature class</span>
+<span class="n">enrich_fc</span> <span class="o">=</span> <span class="n">enrich_df</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">to_featureclass</span><span class="p">(</span><span class="n">out_fc_pth</span><span class="p">)</span>
+
+<span class="c1"># finally, add enrich aliases to the output feature class</span>
+<span class="n">cntry</span><span class="o">.</span><span class="n">add_aliases</span><span class="p">(</span><span class="n">enrich_fc</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.enrich">
+<code class="sig-name descname"><span class="pre">enrich</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enrich_variables</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.enrich" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enrich a spatially enabled dataframe using either a enrichment
+variables defined using a Python List, NumPy Array or Pandas
+Series of enrich names. Also, a filtered enrich variables Pandas
+DataFrame can also be used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>) – Spatially Enabled DataFrame with geography_levels to be
+enriched.</p></li>
+<li><p><strong>enrich_variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">array</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>]) – Optional iterable of enrich variables to use for
+enriching data. Filtered output from
+Country.enrich_variables can also be used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Spatially Enabled DataFrame with enriched data added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.enrich_variables">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">enrich_variables</span></code><a class="headerlink" href="#modeling.Country.enrich_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>DataFrame of all the available enrichment variables.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">arcgis</span> <span class="kn">import</span> <span class="n">GIS</span>
+<span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
+
+<span class="c1"># connect to an Enterprise GIS instance with Business Analyst installed</span>
+<span class="n">gis</span> <span class="o">=</span> <span class="n">GIS</span><span class="p">(</span><span class="s1">&#39;https://mydomain.com/portal&#39;</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="s1">&#39;geowizard&#39;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s1">&#39;Y3ll0wBr!ck$&#39;</span><span class="p">)</span>
+
+<span class="c1"># create a country to work with</span>
+<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+
+<span class="c1"># get the available enrich variables as as DataFrame</span>
+<span class="n">e_vars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
+
+<span class="c1"># filter the variables to just the current year key variables</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Key&#39;</span><span class="p">))</span> <span class="o">&amp;</span>
+                  <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">key_vars</span></code> table will look similar to the following.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 2%" />
+<col style="width: 6%" />
+<col style="width: 19%" />
+<col style="width: 10%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 28%" />
+<col style="width: 5%" />
+<col style="width: 5%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>name</p></th>
+<th class="head"><p>alias</p></th>
+<th class="head"><p>data_collection</p></th>
+<th class="head"><p>enrich_name</p></th>
+<th class="head"><p>enrich_field_name</p></th>
+<th class="head"><p>description</p></th>
+<th class="head"><p>vintage</p></th>
+<th class="head"><p>units</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>TOTPOP_CY</p></td>
+<td><p>2020 Total Population</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.TOTPOP_CY</p></td>
+<td><p>KeyUSFacts_TOTPOP_CY</p></td>
+<td><p>2020 Total Population (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>GQPOP_CY</p></td>
+<td><p>2020 Group Quarters Population</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.GQPOP_CY</p></td>
+<td><p>KeyUSFacts_GQPOP_CY</p></td>
+<td><p>2020 Group Quarters Population (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>DIVINDX_CY</p></td>
+<td><p>2020 Diversity Index</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.DIVINDX_CY</p></td>
+<td><p>KeyUSFacts_DIVINDX_CY</p></td>
+<td><p>2020 Diversity Index (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>TOTHH_CY</p></td>
+<td><p>2020 Total Households</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.TOTHH_CY</p></td>
+<td><p>KeyUSFacts_TOTHH_CY</p></td>
+<td><p>2020 Total Households (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>AVGHHSZ_CY</p></td>
+<td><p>2020 Average Household Size</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.AVGHHSZ_CY</p></td>
+<td><p>KeyUSFacts_AVGHHSZ_CY</p></td>
+<td><p>2020 Average Household Size (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td><p>MEDHINC_CY</p></td>
+<td><p>2020 Median Household Income</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.MEDHINC_CY</p></td>
+<td><p>KeyUSFacts_MEDHINC_CY</p></td>
+<td><p>2020 Median Household Income (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>currency</p></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p>AVGHINC_CY</p></td>
+<td><p>2020 Average Household Income</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.AVGHINC_CY</p></td>
+<td><p>KeyUSFacts_AVGHINC_CY</p></td>
+<td><p>2020 Average Household Income (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>currency</p></td>
+</tr>
+<tr class="row-odd"><td><p>7</p></td>
+<td><p>PCI_CY</p></td>
+<td><p>2020 Per Capita Income</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.PCI_CY</p></td>
+<td><p>KeyUSFacts_PCI_CY</p></td>
+<td><p>2020 Per Capita Income (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>currency</p></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>TOTHU_CY</p></td>
+<td><p>2020 Total Housing Units</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.TOTHU_CY</p></td>
+<td><p>KeyUSFacts_TOTHU_CY</p></td>
+<td><p>2020 Total Housing Units (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>OWNER_CY</p></td>
+<td><p>2020 Owner Occupied HUs</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.OWNER_CY</p></td>
+<td><p>KeyUSFacts_OWNER_CY</p></td>
+<td><p>2020 Owner Occupied Housing Units (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-even"><td><p>10</p></td>
+<td><p>RENTER_CY</p></td>
+<td><p>2020 Renter Occupied HUs</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.RENTER_CY</p></td>
+<td><p>KeyUSFacts_RENTER_CY</p></td>
+<td><p>2020 Renter Occupied Housing Units (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-odd"><td><p>11</p></td>
+<td><p>VACANT_CY</p></td>
+<td><p>2020 Vacant Housing Units</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.VACANT_CY</p></td>
+<td><p>KeyUSFacts_VACANT_CY</p></td>
+<td><p>2020 Vacant Housing Units (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-even"><td><p>12</p></td>
+<td><p>MEDVAL_CY</p></td>
+<td><p>2020 Median Home Value</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.MEDVAL_CY</p></td>
+<td><p>KeyUSFacts_MEDVAL_CY</p></td>
+<td><p>2020 Median Home Value (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>currency</p></td>
+</tr>
+<tr class="row-odd"><td><p>13</p></td>
+<td><p>AVGVAL_CY</p></td>
+<td><p>2020 Average Home Value</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.AVGVAL_CY</p></td>
+<td><p>KeyUSFacts_AVGVAL_CY</p></td>
+<td><p>2020 Average Home Value (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>currency</p></td>
+</tr>
+<tr class="row-even"><td><p>14</p></td>
+<td><p>POPGRW10CY</p></td>
+<td><p>2010-2020 Growth Rate: Population</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.POPGRW10CY</p></td>
+<td><p>KeyUSFacts_POPGRW10CY</p></td>
+<td><p>2010-2020 Population: Annual Growth Rate (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>pct</p></td>
+</tr>
+<tr class="row-odd"><td><p>15</p></td>
+<td><p>HHGRW10CY</p></td>
+<td><p>2010-2020 Growth Rate: Households</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.HHGRW10CY</p></td>
+<td><p>KeyUSFacts_HHGRW10CY</p></td>
+<td><p>2010-2020 Households: Annual Growth Rate (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>pct</p></td>
+</tr>
+<tr class="row-even"><td><p>16</p></td>
+<td><p>FAMGRW10CY</p></td>
+<td><p>2010-2020 Growth Rate: Families</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.FAMGRW10CY</p></td>
+<td><p>KeyUSFacts_FAMGRW10CY</p></td>
+<td><p>2010-2020 Families: Annual Growth Rate (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>pct</p></td>
+</tr>
+<tr class="row-odd"><td><p>17</p></td>
+<td><p>DPOP_CY</p></td>
+<td><p>2020 Total Daytime Population</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.DPOP_CY</p></td>
+<td><p>KeyUSFacts_DPOP_CY</p></td>
+<td><p>2020 Total Daytime Population (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-even"><td><p>18</p></td>
+<td><p>DPOPWRK_CY</p></td>
+<td><p>2020 Daytime Pop: Workers</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.DPOPWRK_CY</p></td>
+<td><p>KeyUSFacts_DPOPWRK_CY</p></td>
+<td><p>2020 Daytime Population: Workers (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+<tr class="row-odd"><td><p>19</p></td>
+<td><p>DPOPRES_CY</p></td>
+<td><p>2020 Daytime Pop: Residents</p></td>
+<td><p>KeyUSFacts</p></td>
+<td><p>KeyUSFacts.DPOPRES_CY</p></td>
+<td><p>KeyUSFacts_DPOPRES_CY</p></td>
+<td><p>2020 Daytime Population: Residents (Esri)</p></td>
+<td><p>2020</p></td>
+<td><p>count</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.geography_levels">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">geography_levels</span></code><a class="headerlink" href="#modeling.Country.geography_levels" title="Permalink to this definition">¶</a></dt>
+<dd><p>DataFrame of available geography levels.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.get_enrich_variables_dataframe_from_variable_list">
+<code class="sig-name descname"><span class="pre">get_enrich_variables_dataframe_from_variable_list</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">enrich_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drop_duplicates</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.get_enrich_variables_dataframe_from_variable_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a dataframe of enrich variables associated with the list of variables
+passed in. This is especially useful when needing aliases (<em>human readable
+names</em>), or are interested in enriching more data using previously enriched
+data as a template.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>enrich_variables</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Series</span></code>]) – Iterable (normally a list) of variables correlating to
+enrichment variables. These variable names can be simply the name, the
+name prefixed by the collection separated by a dot, or the output from
+enrichment in ArcGIS Pro with the field name modified to fit field naming
+and length constraints.</p></li>
+<li><p><strong>drop_duplicates</strong> – Optional boolean (default True) indicating whether to drop
+duplicates. Since the same variables appear in multiple data collections,
+multiple instances of the same variable can be found. Dropping duplicates
+removes redundant matches.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Pandas DataFrame of enrich variables with the different available aliases.</p>
+</dd>
+</dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span> <span class="nn">arcpy</span>
+<span class="kn">from</span> <span class="nn">arcgis</span> <span class="kn">import</span> <span class="n">Country</span>
+
+<span class="c1"># path to previously enriched data</span>
+<span class="n">enriched_fc_pth</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;C:/path/to/geodatabase.gdb/enriched_data&#39;</span><span class="p">)</span>
+<span class="n">new_fc_pth</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;C:/path/to/geodatabase.gdb/block_groups_pdx&#39;</span><span class="p">)</span>
+
+<span class="c1"># get a list of column names from previously enriched data</span>
+<span class="n">attr_lst</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">arcpy</span><span class="o">.</span><span class="n">ListFields</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">enriched_fc_pth</span><span class="p">))</span>
+
+<span class="c1"># get a country to work in</span>
+<span class="n">cntry</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">)</span>
+
+<span class="c1"># get dataframe of variables used for previously enriched data</span>
+<span class="n">enrich_vars</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">get_enrich_variables_dataframe_from_variable_list</span><span class="p">(</span><span class="n">attr_lst</span><span class="p">)</span>
+
+<span class="c1"># enrich block groups in new area of interest using the same variables</span>
+<span class="n">enrich_df</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;portland-vancouver&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">enrich_vars</span><span class="p">)</span>
+
+<span class="c1"># save the new data and add aliases</span>
+<span class="n">enrich_df</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">to_featureclass</span><span class="p">(</span><span class="n">new_fc_pth</span><span class="p">)</span>
+<span class="n">cntry</span><span class="o">.</span><span class="n">add_enrich_aliases</span><span class="p">(</span><span class="n">new_fc_pth</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.level">
+<code class="sig-name descname"><span class="pre">level</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">geography_index</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.level" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get an available <code class="docutils literal notranslate"><span class="pre">geography_level</span></code> in the country.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>geography_index</strong> (<em>(</em><em>&lt;class 'str'&gt;</em><em>, </em><em>&lt;class 'int'&gt;</em><em>)</em>) – Either the geographic_level geo_name or the
+index of the geography_level level. This can be discovered
+using the <code class="docutils literal notranslate"><span class="pre">Country.geography_levels</span></code> method.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Spatially Enabled DataFrame of the requested geography_level with
+the Modeling accessor properties initialized.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.levels">
+<em class="property"><span class="pre">property</span> </em><code class="sig-name descname"><span class="pre">levels</span></code><a class="headerlink" href="#modeling.Country.levels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dataframe of available geography levels. (Alias of geography_levels.)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.verify_can_enrich">
+<code class="sig-name descname"><span class="pre">verify_can_enrich</span></code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.verify_can_enrich" title="Permalink to this definition">¶</a></dt>
+<dd><p>If the country enrich instance can enrich based on the permissions. Only relevant if source is a GIS
+instance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="modeling.Country.verify_can_perform_network_analysis">
+<code class="sig-name descname"><span class="pre">verify_can_perform_network_analysis</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country.verify_can_perform_network_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>If the country enrich instance can perform transportation network analysis based on permissions. Only
+relevant if the source is a GIS instance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>network_function</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Optional string describing specific network function to check for. Valid values include
+‘closestfacility’, ‘locationallocation’, ‘optimizedrouting’, ‘origindestinationcostmatrix’, ‘routing’,
+‘servicearea’, or ‘vehiclerouting’.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Boolean indicating if the country instance, based on permissions, has network analysis privileges.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
