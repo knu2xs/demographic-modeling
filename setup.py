@@ -6,7 +6,7 @@ with open('README.md', 'r') as readme:
 setup(
     name='dm',
     package_dir={"": "src"},
-    packages=find_packages('src',  include=['dm', 'modeling']),
+    packages=find_packages('src',  include=['modeling']),
     version='0.1.0-dev0',
     description='Demographic Modeling',
     long_description=long_description,
