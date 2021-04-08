@@ -7,7 +7,7 @@ setup(
     name='demographic-modeling',
     package_dir={"": "src"},
     packages=find_packages('src',  include=['modeling']),
-    vesrion='0.3.0',
+    version='0.3.0',
     description='Demographic Modeling',
     long_description=long_description,
     long_description_content_type="text/markdown",
