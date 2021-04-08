@@ -30,7 +30,7 @@ copyright = '2020, Joel McCune'
 author = 'Joel McCune'
 
 # The full version, including alpha/beta/rc tags
-release = '0.2.0-dev0'
+release = '0.3.0-dev0'
 
 
 # -- General configuration -----------------------------------------------------
