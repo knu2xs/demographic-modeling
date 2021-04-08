@@ -1000,4 +1000,7 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)
 
+        # ensure valid spatially enabled dataframe
+        biz_std_df.spatial.set_geometry('SHAPE')
+
         return biz_std_df

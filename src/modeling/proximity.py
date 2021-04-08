@@ -4,26 +4,26 @@ from pathlib import Path
 import tempfile
 import uuid
 
-from arcgis.features import GeoAccessor
+from arcgis.features import GeoAccessor, FeatureSet
 from arcgis.geometry import Geometry
 from arcgis.gis import GIS
 import pandas as pd
 
 from . import utils
 from .country import Country
-from ._registry import get_ba_key_value
 
 arcpy_avail = True if importlib.util.find_spec("arcpy") else False
 
 if arcpy_avail:
     import arcpy
+    from ._registry import get_ba_key_value
+
+    # ensure previous runs do not interfere
+    arcpy.env.overwriteOutput = True
 
 # location to store temp files if necessary
 csv_file_prefix = 'temp_closest'
 temp_file_root = os.path.join(tempfile.gettempdir(), csv_file_prefix)
-
-# ensure previous runs do not interfere
-arcpy.env.overwriteOutput = True
 
 
 def _prep_sdf_for_nearest(input_dataframe: pd.DataFrame, id_column: str):
@@ -47,7 +47,7 @@ def _prep_sdf_for_nearest(input_dataframe: pd.DataFrame, id_column: str):
     # ensure the geometry is set
     geom_col_lst = [c for c in input_dataframe.columns if input_dataframe[c].dtype.name.lower() == 'geometry']
     assert len(geom_col_lst) > 0, 'The DataFrame does not appear to have a geometry column defined. This can be ' \
-                                  'accomplished using the "input_dataframe.spatial.set_geometry" method.'
+                                  'accomplished using the "df.spatial.set_geometry" method.'
     geom_col = geom_col_lst[0]
 
     # ensure the column is in the dataframe columns
@@ -67,7 +67,8 @@ def _prep_sdf_for_nearest(input_dataframe: pd.DataFrame, id_column: str):
     # if the geometry is not points, we still need points, so get the geometric centroids
     if input_dataframe.spatial.geometry_type != ['point']:
         input_dataframe['SHAPE'] = input_dataframe[geom_col].apply(
-            lambda geom: Geometry({'x': geom.centroid[0], 'y': geom.centroid[1], 'spatialReference': {'wkid': 4326}}))
+            lambda geom: Geometry({'x': geom.centroid[0], 'y': geom.centroid[1],
+                                   'spatialReference': geom.spatial_reference}))
         input_dataframe.spatial.set_geometry('SHAPE')
 
     # add a second column for the ID as Name
@@ -77,7 +78,7 @@ def _prep_sdf_for_nearest(input_dataframe: pd.DataFrame, id_column: str):
     input_dataframe.spatial.set_geometry('SHAPE')
 
     # set the order of the columns and return
-    return input_dataframe[['ID', 'Name', 'SHAPE']].copy()
+    return input_dataframe[['ID', 'Name', 'SHAPE']]
 
 
 def _get_max_near_dist_arcpy(origin_lyr):
@@ -275,9 +276,8 @@ def _explode_closest_rank_dataframe(closest_df: pd.DataFrame, origin_id_col: str
 
 
 def _get_nearest_local(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame,
-                       network_dataset: [str, Path], single_row_per_origin=True, origin_id_column: str = 'LOCNUM',
-                       destination_id_column: str = 'LOCNUM', destination_count: int = 4,
-                       dest_cols: list = None) -> pd.DataFrame:
+                       network_dataset: [str, Path], origin_id_column: str = 'LOCNUM',
+                       destination_id_column: str = 'LOCNUM', destination_count: int = 4) -> pd.DataFrame:
     """Local implementation of get nearest solution."""
     # check to make sure network analyst is available using the env object to make it simplier
     env = utils.Environment()
@@ -294,23 +294,68 @@ def _get_nearest_local(origin_dataframe: pd.DataFrame, destination_dataframe: pd
     # run the closest analysis locally
     closest_df = _get_nearest_solve_local(origin_net_df, dest_net_df, destination_count, network_dataset)
 
-    # reformat and standardize the output
-    std_clstst_df = _reformat_closest_result_dataframe(closest_df)
+    return closest_df
 
-    if dest_cols:
-        if len(dest_cols):
-            # add the columns onto the near dataframe for output
-            dest_join_df = destination_dataframe[dest_cols].set_index(destination_id_column)
-            std_clstst_df = std_clstst_df.join(dest_join_df, on='destination_id')
 
-    # pivot and explode the results to be a single row for each origin if desired
-    if single_row_per_origin:
-        xplod_dest_cols = [c for c in dest_cols if c != destination_id_column]
-        out_df = _explode_closest_rank_dataframe(std_clstst_df, dest_keep_cols=xplod_dest_cols)
-    else:
-        out_df = std_clstst_df
+def _get_nearest_gis(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame,
+                     source: [str, Country, GIS], origin_id_column: str = 'LOCNUM',
+                     destination_id_column: str = 'LOCNUM', destination_count: int = 4) -> pd.DataFrame:
+    """Web GIS implementation of get nearest solution."""
 
-    return out_df
+    # TODO: backport these to be optional input parameters
+    return_geometry = True
+    output_spatial_reference = 4326
+
+    # build the spatial reference dict
+    out_sr = {'wkid': output_spatial_reference}
+
+    # if a country instance, get the GIS object from it
+    if isinstance(source, Country):
+        assert isinstance(Country.source, GIS), 'The source Country must be reference an ArcGIS Web GIS object ' \
+                                                'instance to solve using a GIS.'
+        source = Country.source
+
+    # run a couple of checks to make sure we do not encounter strange errors later
+    assert isinstance(source, GIS), 'The source must be a GIS object instance.'
+    assert utils.has_networkanalysis_gis(source.users.me), 'You must have the correct permissions in the Web GIS to ' \
+                                                           'perform routing solves. It appears you do not.'
+
+    # prep the datasets for routing
+    origin_fs = _prep_sdf_for_nearest(origin_dataframe, origin_id_column).spatial.to_featureset().to_dict()
+    dest_fs = _prep_sdf_for_nearest(destination_dataframe, destination_id_column).spatial.to_featureset().to_dict()
+
+    # create the url for doing routing
+    route_url = source.properties.helperServices.route.url
+    solve_url = '/'.join(route_url.split('/')[:-1]) + '/ClosestFacility/solveClosestFacility'
+
+    # construct the payload for the routing solve
+    params = {
+        'incidents': origin_fs,
+        'facilities': dest_fs,
+        'returnCFRoutes': True,
+        'f': 'json',
+        'defaultTargetFacilityCount': destination_count,
+        'outputLines': 'esriNAOutputLineTrueShape' if return_geometry else 'esriNAOutputLineNone',
+        'outSR': out_sr
+    }
+
+    # call the server for the solve
+    res = source._con.post(solve_url, params)
+
+    # unpack the results from the response
+    route_df = FeatureSet.from_dict(res['routes']).sdf
+
+    # clean up any empty columns
+    notna_srs = route_df.isna().all()
+    drop_cols = notna_srs[notna_srs].index.values
+    route_df.drop(columns=drop_cols, inplace=True)
+
+    # populate the origin and destination id columns so the output will be as expected
+    id_srs = route_df['Name'].str.split(' - ')
+    route_df['IncidentID'] = id_srs.apply(lambda val: val[0])
+    route_df['FacilityID'] = id_srs.apply(lambda val: val[1])
+
+    return route_df
 
 
 def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame,
@@ -407,11 +452,28 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
 
     # now, the source is either a path to the network source or a GIS object instance, so call each as necessary
     if isinstance(source, str):
-        near_df = _get_nearest_local(origin_dataframe, destination_dataframe, source, single_row_per_origin,
-                                     origin_id_column, destination_id_column, destination_count, dest_cols)
+        raw_near_df = _get_nearest_local(origin_dataframe, destination_dataframe, source, origin_id_column,
+                                         destination_id_column, destination_count)
 
     else:
-        raise Exception('Nearest not yet implemented using GIS object instance.')
+        raw_near_df = _get_nearest_gis(origin_dataframe, destination_dataframe, source, origin_id_column,
+                                       destination_id_column, destination_count)
+
+    # reformat and standardize the output
+    std_clstst_df = _reformat_closest_result_dataframe(raw_near_df)
+
+    if dest_cols:
+        if len(dest_cols):
+            # add the columns onto the near dataframe for output
+            dest_join_df = destination_dataframe[dest_cols].set_index(destination_id_column)
+            std_clstst_df = std_clstst_df.join(dest_join_df, on='destination_id')
+
+    # pivot and explode the results to be a single row for each origin if desired
+    if single_row_per_origin:
+        xplod_dest_cols = [c for c in dest_cols if c != destination_id_column]
+        near_df = _explode_closest_rank_dataframe(std_clstst_df, dest_keep_cols=xplod_dest_cols)
+    else:
+        near_df = std_clstst_df
 
     # add prefixes to columns if provided
     if near_prefix is not None:
@@ -422,12 +484,15 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
 
     # add results to input data
     if single_row_per_origin:
-
         out_df = origin_dataframe.join(near_df.set_index(near_oid_col), on=origin_id_column)
+
     else:
         out_df = near_df.join(origin_dataframe.drop(columns='SHAPE').set_index(origin_id_column), on=near_oid_col)
-
         out_df.columns = [c if not c.endswith('_SHAPE') else 'SHAPE' for c in out_df.columns]
+
+    # shuffle the columns so the geometry is at the end
+    if out_df.spaital.name is not None:
+        out_df = out_df[[c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
 
     # recognize geometry
     out_df.spatial.set_geometry('SHAPE')

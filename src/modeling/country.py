@@ -840,6 +840,9 @@ class Country:
         geom_batch_size = [v['value'] for v in res['serviceLimits']['value']
                            if v['paramName'] == 'optimalBatchStudyAreasNumber'][0]
 
+        # not sure why, but it struggles with larger datasets
+        geom_batch_size = math.ceil(geom_batch_size * 0.5)
+
         # initialize the params for the REST call
         params = {
             'f': 'json',
@@ -916,11 +919,7 @@ class Country:
             # filter the response dataframe to just enrich columns
             e_df = r_df[e_col_lst]
 
-            # TODO: remove - for debugging...
-            if not e_df.notna().all().all():
-                null_df = e_df
-            else:
-                print('successful iteration')
+            assert e_df.notna().all(axis=1).all()
 
             # add the dataframe to the list
             out_df_lst.append(e_df)

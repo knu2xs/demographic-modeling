@@ -213,6 +213,7 @@ def enrich_keycy_test(ba_src: Country):
     cnty_df = ba_src.cbsas.get('seattle').mdl.counties.get()
     enrch_df = cnty_df.mdl.enrich(kv)
     assert isinstance(enrch_df, pd.DataFrame)
+    assert enrch_df.notna().all(axis=1).all()
 
 
 def test_enrich_keycy_local(local_usa):
@@ -229,6 +230,7 @@ def enrich_keycy_set_source_test(ba_src: Country):
     cnty_df.attrs = {}  # flush the attrs so the ModelingAccessor has no clue
     enrch_df = cnty_df.mdl.enrich(kv, country=ba_src)
     assert isinstance(enrch_df, pd.DataFrame)
+    assert enrch_df.notna().all(axis=1).all()
 
 
 def test_enrich_keycy_set_source_local(local_usa):
@@ -244,14 +246,16 @@ def test_enrich_keycy_ent_batch(ent_usa):
     cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
     enrch_df = cnty_df.mdl.enrich(kv)
     assert isinstance(enrch_df, pd.DataFrame)
+    assert enrch_df.notna().all(axis=1).all()
 
 
 def test_enrich_keycy_ent_set_source_batch(ent_usa):
     kv = get_key_cy_vars(ent_usa)
-    cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
-    cnty_df.attrs = {}  # make the ModelingAccessor work for it
-    enrch_df = cnty_df.mdl.enrich(kv)
+    geo_df = ent_usa.cbsas.get('seattle').mdl.level(1).get()
+    geo_df.attrs = {}  # make the ModelingAccessor work for it
+    enrch_df = geo_df.mdl.enrich(kv)
     assert isinstance(enrch_df, pd.DataFrame)
+    assert enrch_df.notna().all(axis=1).all()
 
 
 # businesses functionality testing
@@ -382,10 +386,11 @@ def test_get_business_competition_using_brand_name_ent(aoi_gis_ent):
 
 
 def get_business_competition_using_brand_df_test(aoi_df):
-    biz_df = aoi_df.mdl.business.get('ace hardware')
-    cmp_df = aoi_df.mdl.business.get(biz_df)
+    biz_df = aoi_df.mdl.business.get_by_name('ace hardware')
+    cmp_df = aoi_df.mdl.business.get_competition(biz_df)
     assert isinstance(cmp_df, pd.DataFrame)
     assert pd.Series(('location_id', 'brand_name', 'brand_name_category')).isin(cmp_df.columns).all()
+    assert cmp_df.spatial.validate()
 
 
 def test_get_business_competition_using_brand_df_local(aoi_local):
@@ -398,3 +403,23 @@ def test_get_business_competition_using_brand_df_agol(aoi_gis_agol):
 
 def test_get_business_competition_using_brand_df_ent(aoi_gis_ent):
     get_business_competition_using_brand_df_test(aoi_local)
+
+
+# routing tests
+def tracts_routing_test(aoi_df:pd.DataFrame):
+    geo_df = aoi_df.mdl.level(1).get()
+    biz_df = aoi_df.mdl.business.get_by_name('ace hardware')
+    comp_df = aoi_df.mdl.business.get_competition(biz_df)
+    geo_near_biz_df = geo_df.mdl.get_nearest(biz_df, origin_id_column='ID', near_prefix='brand')
+    geo_near_biz_comp_df = geo_near_biz_df.mdl.get_nearest(comp_df, origin_id_column='ID', near_prefix='comp',
+                                                           destination_columns_to_keep=['brand_name',
+                                                                                        'brand_name_category'])
+    assert isinstance(geo_near_biz_comp_df, pd.DataFrame)
+
+
+def test_tracts_routing_local(aoi_local):
+    test_tracts_routing_local(aoi_local)
+
+
+def test_tracts_routing_gis_ent(aoi_gis_ent):
+    tracts_routing_test(aoi_gis_ent)
