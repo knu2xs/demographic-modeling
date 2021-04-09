@@ -370,7 +370,7 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
         needing the geometry for visualization.
 
     Args:
-        origin_dataframe: Origins for networks solves.
+        origin_dataframe: Origins for network solves.
         destination_dataframe: Destination points in one of the supported input formats.
         source: Either the path to the network dataset, the Country object associated with
             the Business Analyst source being used, or a GIS object instance.
@@ -491,7 +491,7 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
         out_df.columns = [c if not c.endswith('_SHAPE') else 'SHAPE' for c in out_df.columns]
 
     # shuffle the columns so the geometry is at the end
-    if out_df.spaital.name is not None:
+    if out_df.spatial.name is not None:
         out_df = out_df[[c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
 
     # recognize geometry
