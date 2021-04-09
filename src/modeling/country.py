@@ -537,7 +537,7 @@ class Country:
             key_vars = e_vars[(e_vars.data_collection.str.startswith('Key')) &
                               (e_vars.name.str.endswith('CY'))]
 
-        The ``key_vars`` table will look similar to the following.
+        The ``key_vars`` table retrieved using the code sample above will look similar to the following.
 
         ====  ==========  =================================  =================  =====================  =====================  ===============================================  =========  ========
           ..  name        alias                              data_collection    enrich_name            enrich_field_name      description                                        vintage  units
@@ -657,7 +657,7 @@ class Country:
             from pathlib import Path
 
             import arcpy
-            from arcgis import Country
+            from modeling import Country
 
             # path to previously enriched data
             enriched_fc_pth = Path(r'C:/path/to/geodatabase.gdb/enriched_data')
