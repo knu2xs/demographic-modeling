@@ -388,3 +388,51 @@ def get_top_codes(codes: Union[pd.Series, list, tuple], threshold=0.5) -> list:
     cd_vals = list(cnt_df[(cnt_df['pct_cumsum'] < threshold) | (cnt_df['pct'] > threshold)].index)
 
     return cd_vals
+
+class LocalNetworkEnvironment:
+
+    def __init__(self):
+
+        self._installed_lst = []
+        self._not_installed_lst = []
+        self._arcpy_extensions = []
+
+    def has_package(self, package_name):
+        if package_name in self._installed_lst:
+            return True
+        elif package_name in self._not_installed_lst:
+            return False
+        else:
+            installed = True if importlib.util.find_spec(package_name) else False
+            if installed:
+                self._installed_lst.append(package_name)
+            else:
+                self._not_installed_lst.append(package_name)
+        return installed
+
+    @property
+    def arcpy_extensions(self):
+        if len(self._arcpy_extensions) > 0:
+            return self._arcpy_extensions
+        elif not self.has_package('arcpy'):
+            warnings.warn('ArcPy is not available in your current environment.')
+            return self._arcpy_extensions
+        else:
+            extension_lst = ['3D', 'Datareviewer', 'DataInteroperability', 'Airports', 'Aeronautical', 'Bathymetry',
+                             'Nautical', 'GeoStats', 'Network', 'Spatial', 'Schematics', 'Tracking', 'JTX', 'ArcScan',
+                             'Business', 'Defense', 'Foundation', 'Highways', 'StreetMap']
+
+            import arcpy
+            for extension in extension_lst:
+                if arcpy.CheckExtension(extension):
+                    self._arcpy_extensions.append(extension)
+            return self._arcpy_extensions
+
+    def arcpy_checkout_extension(self, extension):
+        if self.has_package('arcpy') and extension in self.arcpy_extensions:
+            import arcpy
+            arcpy.CheckOutExtension(extension)
+            return True
+        else:
+            raise Exception(f'Cannot check out {extension}. It either is not licensed, not installed, or you are not '
+                            f'using the correct reference.')

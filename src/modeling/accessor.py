@@ -12,7 +12,7 @@ from arcgis.geometry import Geometry, SpatialReference
 
 from .country import Country, GeographyLevel
 from .utils import avail_arcpy, local_vs_gis, geography_iterable_to_arcpy_geometry_list, validate_spatial_reference, \
-    get_top_codes, preproces_code_inputs, has_networkanalysis_gis
+    get_top_codes, preproces_code_inputs, has_networkanalysis_gis, LocalNetworkEnvironment
 
 if avail_arcpy:
     import arcpy
@@ -36,6 +36,7 @@ class ModelingAccessor:
         self._data = obj
         self._index = obj.index
         self.business = Business(self)
+        self.proximity = Proximity(self)
 
         # save the country if it is passed from the invoking parent
         if '_cntry' in obj.attrs.keys():
@@ -1076,16 +1077,15 @@ class Proximity:
         self._travel_modes = None
 
         if isinstance(self.source, GIS):
-            self._url = gis.properties.helperServices.route.url
-            self._properties = self.source._con.get(gis.properties.helperServices.route.url)
+            self._properties = self.source._con.get(self.source.properties.helperServices.route.url)
         else:
-            self._url, self._properties = None, None
+            self._properties = None
 
     def __repr__(self):
         if isinstance(self.source, GIS):
-            repr = f'<Proximity - {gis.__repr__()}>'
+            repr = f'<modeling.Proximity - {gis.__repr__()}>'
         else:
-            repr = '<Proximity>'
+            repr = '<modeling.Proximity>'
         return repr
 
     @property
@@ -1347,7 +1347,7 @@ class Proximity:
                            destination_id_column: str = 'LOCNUM', destination_count: int = 4) -> pd.DataFrame:
         """Local implementation of get nearest solution."""
         # check to make sure network analyst is available using the env object to make it simplier
-        env = utils.Environment()
+        env = LocalNetworkEnvironment()
         if 'Network' in env.arcpy_extensions:
             env.arcpy_checkout_extension('Network')
         else:
@@ -1374,6 +1374,9 @@ class Proximity:
 
         # build the spatial reference dict
         out_sr = {'wkid': output_spatial_reference}
+
+        # if a source is not explicitly specified, try to get it out of the input data
+        source = self.source if not source else source
 
         # if a country instance, get the GIS object from it
         if isinstance(source, Country):
@@ -1424,8 +1427,8 @@ class Proximity:
 
         return route_df
 
-    def get_nearest(self, origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFrame,
-                    source: [str, Path, Country, GIS], single_row_per_origin: bool = True,
+    def get_nearest(self, destination_dataframe: pd.DataFrame,
+                    source: [str, Path, Country, GIS] = None, single_row_per_origin: bool = True,
                     origin_id_column: str = 'LOCNUM', destination_id_column: str = 'LOCNUM',
                     destination_count: int = 4, near_prefix: str = None,
                     destination_columns_to_keep: [str, list] = None) -> pd.DataFrame:
@@ -1436,7 +1439,6 @@ class Proximity:
             needing the geometry for visualization.
 
         Args:
-            origin_dataframe: Origins for network solves.
             destination_dataframe: Destination points in one of the supported input formats.
             source: Either the path to the network dataset, the Country object associated with
                 the Business Analyst source being used, or a GIS object instance.
@@ -1455,20 +1457,22 @@ class Proximity:
         Returns: Spatially Enabled Dataframe with a row for each origin id, and metrics for
             each nth destinations.
         """
+        assert isinstance(destination_dataframe, pd.DataFrame), 'Origin and destination dataframes must both be ' \
+                                                                'pd.DataFrames'
+        assert destination_dataframe.spatial.validate(), 'Origin and destination dataframes must be valid Spatially ' \
+                                                         'enabled DataFrames. This can be checked using ' \
+                                                         'df.spatial.validate().'
 
-        for df in [origin_dataframe, destination_dataframe]:
-            assert isinstance(df, pd.DataFrame), 'Origin and destination dataframes must both be pd.DataFrames'
-            assert df.spatial.validate(), 'Origin and destination dataframes must be valid Spatially enabled DataFrames.' \
-                                          'This can be checked using df.spatial.validate()'
-
-        assert isinstance(source, (str, Path, Country, GIS)), 'source must be either a path to the network dataset, a ' \
-                                                              'dm.Country object instance, or a reference to a GIS.'
+        if self.source is None:
+            assert isinstance(source, (str, Path, Country, GIS)), 'source must be either a path to the network ' \
+                                                                  'dataset, a modeling.Country object instance, or a ' \
+                                                                  'reference to a GIS.'
 
         assert isinstance(single_row_per_origin, bool)
 
-        assert origin_id_column in origin_dataframe.columns, f'The provided origin_id_column does not appear to be in ' \
-                                                             f'the origin_dataframe columns ' \
-                                                             f'[{", ".join(origin_dataframe.columns)}]'
+        assert origin_id_column in self._data.columns, f'The provided origin_id_column does not appear to be in ' \
+                                                       f'the origin_dataframe columns ' \
+                                                       f'[{", ".join(self._data.columns)}]'
 
         assert destination_id_column in destination_dataframe.columns, f'The provided destination_id_column does not ' \
                                                                        f'appear to be in the destination_dataframe ' \
@@ -1508,8 +1512,8 @@ class Proximity:
 
             # check all the columns to make sure they are in the output dataframe
             for col in dest_cols:
-                assert col in destination_dataframe.columns, f'One of the destination_columns_to_keep {col}, does not ' \
-                                                             f'appear to be in the destination_dataframe columns ' \
+                assert col in destination_dataframe.columns, f'One of the destination_columns_to_keep {col}, does ' \
+                                                             f'not appear to be in the destination_dataframe columns ' \
                                                              f'[{", ".join(destination_dataframe.columns)}].'
 
         # if no columns, just populate an empty list so nested functions work
@@ -1518,11 +1522,11 @@ class Proximity:
 
         # now, the source is either a path to the network source or a GIS object instance, so call each as necessary
         if isinstance(source, str):
-            raw_near_df = self._get_nearest_local(origin_dataframe, destination_dataframe, source, origin_id_column,
+            raw_near_df = self._get_nearest_local(self._data, destination_dataframe, source, origin_id_column,
                                                   destination_id_column, destination_count)
 
         else:
-            raw_near_df = self._get_nearest_gis(origin_dataframe, destination_dataframe, source, origin_id_column,
+            raw_near_df = self._get_nearest_gis(self._data, destination_dataframe, source, origin_id_column,
                                                 destination_id_column, destination_count)
 
         # reformat and standardize the output
@@ -1550,10 +1554,10 @@ class Proximity:
 
         # add results to input data
         if single_row_per_origin:
-            out_df = origin_dataframe.join(near_df.set_index(near_oid_col), on=origin_id_column)
+            out_df = self._data.join(near_df.set_index(near_oid_col), on=origin_id_column)
 
         else:
-            out_df = near_df.join(origin_dataframe.drop(columns='SHAPE').set_index(origin_id_column), on=near_oid_col)
+            out_df = near_df.join(self._data.drop(columns='SHAPE').set_index(origin_id_column), on=near_oid_col)
             out_df.columns = [c if not c.endswith('_SHAPE') else 'SHAPE' for c in out_df.columns]
 
         # shuffle the columns so the geometry is at the end
@@ -1562,5 +1566,8 @@ class Proximity:
 
         # recognize geometry
         out_df.spatial.set_geometry('SHAPE')
+
+        # tack on the attrs for any subsequent modeling analysis
+        out_df.attrs = self._data.attrs
 
         return out_df
