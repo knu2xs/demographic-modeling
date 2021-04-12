@@ -188,4 +188,4 @@ html_static_path = ['_static']
 html_file_suffix = '.html'
 
 # Output file base geographic_level for HTML help builder.
-htmlhelp_basename = f'demographic-modeling-module_doc'
+htmlhelp_basename = f'demographic-modeling_doc'

@@ -2,6 +2,7 @@ import importlib
 import os
 from pathlib import Path
 import tempfile
+from typing import Union
 import uuid
 
 from arcgis.features import GeoAccessor, FeatureSet
@@ -24,7 +25,6 @@ if arcpy_avail:
 # location to store temp files if necessary
 csv_file_prefix = 'temp_closest'
 temp_file_root = os.path.join(tempfile.gettempdir(), csv_file_prefix)
-
 
 def _prep_sdf_for_nearest(input_dataframe: pd.DataFrame, id_column: str):
     """
@@ -498,3 +498,51 @@ def get_nearest(origin_dataframe: pd.DataFrame, destination_dataframe: pd.DataFr
     out_df.spatial.set_geometry('SHAPE')
 
     return out_df
+
+
+def get_travel_modes(source: Union[Path, GIS, Country], all_properties=False):
+    """
+    Retrieve travel modes for the specified routing source.
+    Args:
+        source: Path to an ArcGIS Network Dataset if working in an environment with
+            ArcGIS Pro providing access to ``arcpy``. If using a connection to a
+            Web GIS thorough a GIS object instance, the GIS object instance.
+            Finally, if using a Country object instance, the Country.
+        all_properties: Get all available properties for all the travel modes.
+            Default is False.
+
+    Returns:
+        Dataframe of available travel modes and descriptions for each.
+    """
+    # if the source is a country, extract the source from the country
+    if isinstance(source, Country):
+        source = source.source
+
+    # if a string, make sure simply set to local, and make sure arcpy is available
+    if isinstance(source, str):
+        source = source.lower()
+        assert source == 'local', 'If intending to use local resources for analysis, you must use the "local" ' \
+                                  f'keyword. You provided, "{source}".'
+        assert arcpy_avail, 'To use local resources for routing, you must be using an environment with arcpy ' \
+                            'available (ArcGIS Pro installed).'
+
+    # otherwise, we SHOULD be dealing with a GIS
+    elif isinstance(source, GIS):
+
+        # get the url from the gis properties, retrieve the route properties, and format travel modes into a DataFrame
+        prop = source._con.get(source.properties.helperServices.route.url)
+        trvl_df = pd.DataFrame(prop['supportedTravelModes'])
+
+        # populate the key for easy lookups
+        trvl_df['key'] = trvl_df['name'].str.lower().str.replace(' ', '_')
+        trvl_df.set_index('key', inplace=True, drop=True)
+
+        # unless more is desired, keep it simple
+        if not all_properties:
+            trvl_df = trvl_df.loc[:, ['name', 'type', 'description']]
+
+    else:
+        raise Exception(f'The source must be either "local", a GIS object, or a Country object, not "{type(source)}".')
+
+    return trvl_df
+

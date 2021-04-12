@@ -1,7 +1,7 @@
 ModelingAccessor (``mdl``)
 ----------------------------------------------------------
 
-The DemographicModeling object, a Pandas DataFrame Accessor, likely is
+The ModelingAccessor object (``df.mdl``), a Pandas DataFrame Accessor, likely is
 going to be one of the most often used objects in this package. The
 ModelingAccessor object is rarely, if ever, created directly. Rather,
 it is accessed as a property of a Spatially Enabled DataFrame.
@@ -43,7 +43,8 @@ Country
 
 The country object is the foundational building block for
 working with demographic data. This is due to data collection,
-aggregation and dissemination methods.
+aggregation and dissemination methods used in Business Analyst.
+Succinctly, this is how the data is organized.
 
 .. autoclass:: modeling.Country
    :members:

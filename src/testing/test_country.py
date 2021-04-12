@@ -9,7 +9,7 @@ dir_src = Path(__file__).parent.parent.parent / 'src'
 assert dir_src.exists()
 sys.path.insert(0, str(dir_src))
 
-from modeling import get_countries, Country
+from modeling import get_travel_modes, get_countries, Country
 import pandas as pd
 import pytest
 
@@ -406,15 +406,45 @@ def test_get_business_competition_using_brand_df_ent(aoi_gis_ent):
 
 
 # routing tests
+def get_travel_modes_test(src):
+    trvl_df = get_travel_modes(src)
+    assert isinstance(trvl_df, pd.DataFrame)
+
+
+def test_get_travel_modes_gis_ent(ent_gis):
+    get_travel_modes_test(ent_gis)
+
+
+def test_get_travel_modes_gis_agol(agol_gis):
+    get_travel_modes_test(agol_gis)
+
+
+def test_get_travel_modes_local():
+    get_travel_modes_test('local')
+
+
+def test_get_travel_modes_cntry_gis_ent(ent_usa):
+    get_travel_modes_test(ent_usa)
+
+
+def test_get_travel_modes_cntry_gis_agol(agol_usa):
+    get_travel_modes_test(agol_usa)
+
+
+def test_get_travel_modes_cntry_local(local_usa):
+    get_travel_modes_test(local_usa)
+
+
 def tracts_routing_test(aoi_df:pd.DataFrame):
     geo_df = aoi_df.mdl.level(1).get()
     biz_df = aoi_df.mdl.business.get_by_name('ace hardware')
     comp_df = aoi_df.mdl.business.get_competition(biz_df)
-    geo_near_biz_df = geo_df.mdl.get_nearest(biz_df, origin_id_column='ID', near_prefix='brand')
-    geo_near_biz_comp_df = geo_near_biz_df.mdl.get_nearest(comp_df, origin_id_column='ID', near_prefix='comp',
-                                                           destination_columns_to_keep=['brand_name',
-                                                                                        'brand_name_category'])
+    geo_near_biz_df = geo_df.mdl.proximity.get_nearest(biz_df, origin_id_column='ID', near_prefix='brand')
+    geo_near_biz_comp_df = geo_near_biz_df.mdl.proximity.get_nearest(comp_df, origin_id_column='ID', near_prefix='comp',
+                                                                     destination_columns_to_keep=['brand_name',
+                                                                     'brand_name_category'])
     assert isinstance(geo_near_biz_comp_df, pd.DataFrame)
+    assert geo_near_biz_comp_df.spatial.validate()
 
 
 def test_tracts_routing_local(aoi_local):
