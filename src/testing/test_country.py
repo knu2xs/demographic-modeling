@@ -438,13 +438,10 @@ def test_get_travel_modes_cntry_local(local_usa):
 def tracts_routing_test(aoi_df:pd.DataFrame):
     geo_df = aoi_df.mdl.level(1).get()
     biz_df = aoi_df.mdl.business.get_by_name('ace hardware')
-    comp_df = aoi_df.mdl.business.get_competition(biz_df)
     geo_near_biz_df = geo_df.mdl.proximity.get_nearest(biz_df, origin_id_column='ID', near_prefix='brand')
-    geo_near_biz_comp_df = geo_near_biz_df.mdl.proximity.get_nearest(comp_df, origin_id_column='ID', near_prefix='comp',
-                                                                     destination_columns_to_keep=['brand_name',
-                                                                     'brand_name_category'])
-    assert isinstance(geo_near_biz_comp_df, pd.DataFrame)
-    assert geo_near_biz_comp_df.spatial.validate()
+    assert isinstance(geo_near_biz_df, pd.DataFrame)
+    assert geo_near_biz_df.spatial.validate()
+    assert len(geo_near_biz_df.index) == len(geo_df.index)
 
 
 def test_tracts_routing_local(aoi_local):
@@ -453,3 +450,7 @@ def test_tracts_routing_local(aoi_local):
 
 def test_tracts_routing_gis_ent(aoi_gis_ent):
     tracts_routing_test(aoi_gis_ent)
+
+
+def test_tracts_routing_gis_agol(aoi_gis_agol):
+    tracts_routing_test(aoi_gis_agol)

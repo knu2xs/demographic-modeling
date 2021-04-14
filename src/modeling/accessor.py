@@ -1,4 +1,5 @@
 """Provide modeling accessor object namespace and methods."""
+import math
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -9,6 +10,7 @@ from arcgis.features import GeoAccessor, FeatureSet
 from arcgis.features.geo._internals import register_dataframe_accessor
 from arcgis.gis import GIS
 from arcgis.geometry import Geometry, SpatialReference
+from arcgis.network import ClosestFacilityLayer
 
 from .country import Country, GeographyLevel
 from .utils import avail_arcpy, local_vs_gis, geography_iterable_to_arcpy_geometry_list, validate_spatial_reference, \
@@ -18,7 +20,6 @@ if avail_arcpy:
     import arcpy
     from ._xml_interrogation import get_business_points_data_path
     from ._registry import get_ba_key_value
-
 
 
 @register_dataframe_accessor('mdl')
@@ -469,7 +470,7 @@ class Business:
         return biz_df
 
     def calculate_brand_name_category(self, local_threshold: int = 0,
-                                      inplace: bool=False) -> Union[pd.DataFrame, None]:
+                                      inplace: bool = False) -> Union[pd.DataFrame, None]:
         """
         For the output of any Business.get* function, calculate a column named 'brand_name_category'. This function is
         frequently used to re-calculate the category identifying unique local retailers, and group them collectively
@@ -555,6 +556,9 @@ class Business:
         brnd_cat_fltr = biz_df['brand_name'].isin(brand_names)
         biz_df.loc[~brnd_cat_fltr, 'brand_name_category'] = 'local_brand'
         biz_df.loc[brnd_cat_fltr, 'brand_name_category'] = biz_df.loc[brnd_cat_fltr]['brand_name']
+
+        # make sure the geometry is correctly set
+        biz_df.spatial.set_geometry('SHAPE')
 
         return None if inplace else biz_df
 
@@ -1064,6 +1068,7 @@ class Proximity:
     """
     Provides access to proximity calculation functions.
     """
+
     def __init__(self, mdl: ModelingAccessor):
 
         self._data = mdl._data
@@ -1083,7 +1088,7 @@ class Proximity:
 
     def __repr__(self):
         if isinstance(self.source, GIS):
-            repr = f'<modeling.Proximity - {gis.__repr__()}>'
+            repr = f'<modeling.Proximity - {self.source.__repr__()}>'
         else:
             repr = '<modeling.Proximity>'
         return repr
@@ -1120,18 +1125,18 @@ class Proximity:
         geom_col = geom_col_lst[0]
 
         # ensure the column is in the dataframe columns
-        assert id_column in input_dataframe.columns, f'The provided id_column, "{id_column}," does not appear to be in ' \
-                                                     f'the columns [{", ".join(input_dataframe.columns)}]"'
+        assert id_column in input_dataframe.columns, f'The provided id_column, "{id_column}," does not appear to be ' \
+                                                     f'in the columns [{", ".join(input_dataframe.columns)}]"'
 
         # par down the input dataframe to just the columns needed
-        input_dataframe = input_dataframe[[id_column, geom_col]].copy()
+        input_dataframe = input_dataframe.loc[:, [id_column, geom_col]]
 
         # rename the columns to follow the schema needed for routing
         input_dataframe.columns = ['ID', 'SHAPE']
 
         # ensure the spatial reference is WGS84 - if not, make it so
         if input_dataframe.spatial.sr.wkid != 4326:
-            input_dataframe = input_dataframe.dm.project(4326)
+            input_dataframe = input_dataframe.mdl.project(4326)
 
         # if the geometry is not points, we still need points, so get the geometric centroids
         if input_dataframe.spatial.geometry_type != ['point']:
@@ -1147,7 +1152,7 @@ class Proximity:
         input_dataframe.spatial.set_geometry('SHAPE')
 
         # set the order of the columns and return
-        return input_dataframe[['ID', 'Name', 'SHAPE']]
+        return input_dataframe.loc[:, ['ID', 'Name', 'SHAPE']]
 
     @staticmethod
     def _get_max_near_dist_arcpy(origin_lyr):
@@ -1307,14 +1312,16 @@ class Proximity:
 
         Returns: Dataframe with a single row for each origin with multiple destination metrics for each.
         """
+        column_identifying_prefix = 'proximity_'
+
         # create a dataframe to start working with comprised of only the unique origin_dataframe to start with
         origin_dest_df = pd.DataFrame(closest_df[origin_id_col].unique(), columns=[origin_id_col])
 
         # get a list of the proximity columns
-        proximity_cols = [col for col in closest_df.columns if col.startswith('proximity_')]
+        proximity_cols = [col for col in closest_df.columns if col.startswith(column_identifying_prefix)]
 
         # add any destination columns
-        if dest_keep_cols:
+        if len(dest_keep_cols):
             proximity_cols = proximity_cols + dest_keep_cols
 
         # iterate the closest destination ranking
@@ -1328,6 +1335,7 @@ class Proximity:
 
             # iterate the relevant columns
             for col in [dest_id_col] + proximity_cols:
+
                 # create a new column name from the unique value and the original row name
                 new_name = f'{col}_{rank_val:02d}'
 
@@ -1372,6 +1380,9 @@ class Proximity:
         return_geometry = True
         output_spatial_reference = 4326
 
+        # populate the correct request parameter for returning geometry
+        out_geom = 'esriNAOutputLineTrueShape' if return_geometry else 'esriNAOutputLineNone'
+
         # build the spatial reference dict
         out_sr = {'wkid': output_spatial_reference}
 
@@ -1390,27 +1401,40 @@ class Proximity:
                                                          'perform routing solves. It appears you do not.'
 
         # prep the datasets for routing
-        origin_fs = self._prep_sdf_for_nearest(origin_dataframe, origin_id_column).spatial.to_featureset().to_dict()
-        dest_fs = self._prep_sdf_for_nearest(destination_dataframe, destination_id_column).spatial.to_featureset().to_dict()
+        origin_df = self._prep_sdf_for_nearest(origin_dataframe, origin_id_column)
+        dest_df = self._prep_sdf_for_nearest(destination_dataframe, destination_id_column)
 
-        # create the url for doing routing
-        route_url = source.properties.helperServices.route.url
-        solve_url = '/'.join(route_url.split('/')[:-1]) + '/ClosestFacility/solveClosestFacility'
+        # get the url for doing routing
+        clst_url = source.properties.helperServices.closestFacility.url
 
-        # construct the payload for the routing solve
-        params = {
-            'incidents': origin_fs,
-            'facilities': dest_fs,
-            'returnCFRoutes': True,
-            'f': 'json',
-            'defaultTargetFacilityCount': destination_count,
-            'outputLines': 'esriNAOutputLineTrueShape' if return_geometry else 'esriNAOutputLineNone',
-            'outSR': out_sr,
-            'travelDirection': 'esriNATravelDirectionToFacility'
-        }
-
-        # call the server for the solve
-        res = source._con.post(solve_url, params)
+        # call the server for the solve - left in a lot of parameters in case want to expand capability
+        res = ClosestFacilityLayer(clst_url, self.source).solve_closest_facility(
+            incidents=origin_df,
+            facilities=dest_df,
+            travel_mode=None,
+            attribute_parameter_values=None,
+            return_cf_routes=True,
+            output_lines=out_geom,
+            default_cutoff=None,
+            default_target_facility_count=destination_count,
+            travel_direction=None,
+            out_sr=out_sr,
+            accumulate_attribute_names=None,
+            impedance_attribute_name=None,
+            restriction_attribute_names=None,
+            restrict_u_turns=None,
+            use_hierarchy=True,
+            output_geometry_precision=None,
+            output_geometry_precision_units=None,
+            time_of_day=None,
+            time_of_day_is_utc=None,
+            time_of_day_usage=None,
+            return_z=False,
+            overrides=None,
+            preserve_objectid=False,
+            future=False,
+            ignore_invalid_locations=True
+        )
 
         # unpack the results from the response
         route_df = FeatureSet.from_dict(res['routes']).sdf
@@ -1457,6 +1481,9 @@ class Proximity:
         Returns: Spatially Enabled Dataframe with a row for each origin id, and metrics for
             each nth destinations.
         """
+        # Max GIS batch count
+        batch_size = 99
+
         assert isinstance(destination_dataframe, pd.DataFrame), 'Origin and destination dataframes must both be ' \
                                                                 'pd.DataFrames'
         assert destination_dataframe.spatial.validate(), 'Origin and destination dataframes must be valid Spatially ' \
@@ -1526,8 +1553,24 @@ class Proximity:
                                                   destination_id_column, destination_count)
 
         else:
-            raw_near_df = self._get_nearest_gis(self._data, destination_dataframe, source, origin_id_column,
-                                                destination_id_column, destination_count)
+
+            # since having issues with over 1,000 origins, break into batches
+            batch_cnt = math.ceil(len(self._data.index) / batch_size)
+
+            # iterate through batches and get response dataframes
+            near_df_lst = []
+            for idx in range(batch_cnt):
+                idx_start = batch_size * idx
+                idx_end = batch_size * (idx + 1)
+                idx_end = idx_end if idx_end < len(self._data) else len(self._data) + 1
+                orig_df = self._data.loc[idx_start: idx_end]
+                near_df_tmp = self._get_nearest_gis(orig_df, destination_dataframe, source, origin_id_column,
+                                                    destination_id_column, destination_count)
+                near_df_lst.append(near_df_tmp)
+
+            # consolidate and remove temp df list
+            raw_near_df = pd.concat(near_df_lst)
+            del near_df_lst
 
         # reformat and standardize the output
         std_clstst_df = self._reformat_closest_result_dataframe(raw_near_df)
@@ -1563,6 +1606,9 @@ class Proximity:
         # shuffle the columns so the geometry is at the end
         if out_df.spatial.name is not None:
             out_df = out_df[[c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
+            
+        # make sure there are not any duplicates lingering
+        out_df.drop_duplicates(origin_id_column, inplace=True)
 
         # recognize geometry
         out_df.spatial.set_geometry('SHAPE')
