@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>ModelingAccessor (mdl) &mdash; demographic-modeling-module 0.1.0-dev0 documentation</title>
+  <title>ModelingAccessor (mdl) &mdash; demographic-modeling-module 0.3.0 documentation</title>
   
 
   
@@ -89,6 +89,7 @@
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Configuration</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">ModelingAccessor (<code class="docutils literal notranslate"><span class="pre">mdl</span></code>)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#business">Business</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#proximity">Proximity</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#country">Country</a></li>
 <li class="toctree-l1"><a class="reference internal" href="modeling.utils.html">modeling.utils module</a></li>
 </ul>
@@ -160,7 +161,7 @@
             
   <div class="section" id="modelingaccessor-mdl">
 <h1>ModelingAccessor (<code class="docutils literal notranslate"><span class="pre">mdl</span></code>)<a class="headerlink" href="#modelingaccessor-mdl" title="Permalink to this headline">¶</a></h1>
-<p>The DemographicModeling object, a Pandas DataFrame Accessor, likely is
+<p>The ModelingAccessor object (<code class="docutils literal notranslate"><span class="pre">df.mdl</span></code>), a Pandas DataFrame Accessor, likely is
 going to be one of the most often used objects in this package. The
 ModelingAccessor object is rarely, if ever, created directly. Rather,
 it is accessed as a property of a Spatially Enabled DataFrame.</p>
@@ -805,11 +806,57 @@ be sampled to return the industry code values identifying the locations.</p></li
 </dd></dl>
 
 </div>
+<div class="section" id="proximity">
+<h1>Proximity<a class="headerlink" href="#proximity" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="modeling.Proximity">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">modeling.</span></code><code class="sig-name descname"><span class="pre">Proximity</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mdl</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Proximity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides access to proximity calculation functions.</p>
+<dl class="py method">
+<dt id="modeling.Proximity.get_nearest">
+<code class="sig-name descname"><span class="pre">get_nearest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">destination_dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single_row_per_origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin_id_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'LOCNUM'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_id_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'LOCNUM'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">near_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_columns_to_keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Proximity.get_nearest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a closest destination dataframe using origin and destination Spatially Enabled
+Dataframes, but keep each origin and destination still in a discrete row instead
+of collapsing to a single row per origin. The main reason to use this is if
+needing the geometry for visualization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>destination_dataframe</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code>) – Destination points in one of the supported input formats.</p></li>
+<li><p><strong>source</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Country</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">GIS</span></code>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]) – Either the path to the network dataset, the Country object associated with
+the Business Analyst source being used, or a GIS object instance.</p></li>
+<li><p><strong>single_row_per_origin</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a>]) – Optional - Whether or not to pivot the results to return
+only one row for each origin location. Default is True.</p></li>
+<li><p><strong>origin_id_column</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Optional - Column in the origin points Spatially Enabled Dataframe
+uniquely identifying each feature. Default is ‘LOCNUM’.</p></li>
+<li><p><strong>destination_id_column</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – Column in the destination points Spatially Enabled Dataframe
+uniquely identifying each feature</p></li>
+<li><p><strong>destination_count</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a>]) – Integer number of destinations to search for from every origin
+point.</p></li>
+<li><p><strong>near_prefix</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>]) – String prefix to prepend onto near column names in the output.</p></li>
+<li><p><strong>destination_columns_to_keep</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.9)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Union</span></code></a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.9)"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.9)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></a>]) – List of columns to keep in the output. Commonly, if
+businesses, this includes the column with the business names.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Spatially Enabled Dataframe with a row for each origin id, and metrics for
+each nth destinations.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 <div class="section" id="country">
 <h1>Country<a class="headerlink" href="#country" title="Permalink to this headline">¶</a></h1>
 <p>The country object is the foundational building block for
 working with demographic data. This is due to data collection,
-aggregation and dissemination methods.</p>
+aggregation and dissemination methods used in Business Analyst.
+Succinctly, this is how the data is organized.</p>
 <dl class="py class">
 <dt id="modeling.Country">
 <em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">modeling.</span></code><code class="sig-name descname"><span class="pre">Country</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Country" title="Permalink to this definition">¶</a></dt>
@@ -953,7 +1000,7 @@ Country.enrich_variables can also be used.</p></li>
                   <span class="p">(</span><span class="n">e_vars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))]</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">key_vars</span></code> table will look similar to the following.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">key_vars</span></code> table retrieved using the code sample above will look similar to the following.</p>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 2%" />
@@ -1220,7 +1267,7 @@ removes redundant matches.</p></li>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span> <span class="nn">arcpy</span>
-<span class="kn">from</span> <span class="nn">arcgis</span> <span class="kn">import</span> <span class="n">Country</span>
+<span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
 
 <span class="c1"># path to previously enriched data</span>
 <span class="n">enriched_fc_pth</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;C:/path/to/geodatabase.gdb/enriched_data&#39;</span><span class="p">)</span>

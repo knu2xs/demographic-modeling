@@ -1,12 +1,12 @@
-.. demographic-modeling-module documentation master file.
+.. demographic-modeling documentation master file.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Demographic-Modeling's documentation!
+Welcome to documentation for Demographic-Modeling!
 ==========================================================
 
 Demographic Modeling does not introduce *new* functionality to ArcGIS, but *does* make using ArcGIS Business Analyst
-with machine learning *dramatically* easier. The Demographic Modeling Module provides a single Python interface for
+with machine learning *dramatically* easier. Demographic Modeling provides a single Python interface for
 using ArcGIS Business Analyst for feature creation as part of a data preparation pipeline.
 
 To get started with this project quickly, I suggest cloning the repo, install the package, and diving into the
