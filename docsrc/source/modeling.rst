@@ -38,6 +38,12 @@ Business
 .. autoclass:: modeling.Business
    :members:
 
+Proximity
+----------------------------------------------------------
+
+.. autoclass:: modeling.Proximity
+   :members:
+
 Country
 ----------------------------------------------------------
 

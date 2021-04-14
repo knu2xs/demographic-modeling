@@ -3,7 +3,7 @@ import math
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from typing import Union
+from typing import Union, Optional
 from warnings import warn
 
 from arcgis.features import GeoAccessor, FeatureSet
@@ -1452,15 +1452,15 @@ class Proximity:
         return route_df
 
     def get_nearest(self, destination_dataframe: pd.DataFrame,
-                    source: [str, Path, Country, GIS] = None, single_row_per_origin: bool = True,
-                    origin_id_column: str = 'LOCNUM', destination_id_column: str = 'LOCNUM',
-                    destination_count: int = 4, near_prefix: str = None,
-                    destination_columns_to_keep: [str, list] = None) -> pd.DataFrame:
+                    source: Union[str, Path, Country, GIS] = None, single_row_per_origin: Optional[bool] = True,
+                    origin_id_column: Optional[str] = 'LOCNUM', destination_id_column: Optional[str] = 'LOCNUM',
+                    destination_count: Optional[int] = 4, near_prefix: Optional[str] = None,
+                    destination_columns_to_keep: Union[str, list] = None) -> pd.DataFrame:
         """
         Create a closest destination dataframe using origin and destination Spatially Enabled
-            Dataframes, but keep each origin and destination still in a discrete row instead
-            of collapsing to a single row per origin. The main reason to use this is if
-            needing the geometry for visualization.
+        Dataframes, but keep each origin and destination still in a discrete row instead
+        of collapsing to a single row per origin. The main reason to use this is if
+        needing the geometry for visualization.
 
         Args:
             destination_dataframe: Destination points in one of the supported input formats.
@@ -1478,7 +1478,8 @@ class Proximity:
             destination_columns_to_keep: List of columns to keep in the output. Commonly, if
                 businesses, this includes the column with the business names.
 
-        Returns: Spatially Enabled Dataframe with a row for each origin id, and metrics for
+        Returns:
+            Spatially Enabled Dataframe with a row for each origin id, and metrics for
             each nth destinations.
         """
         # Max GIS batch count
