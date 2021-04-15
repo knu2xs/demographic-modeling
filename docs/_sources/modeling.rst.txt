@@ -10,6 +10,8 @@ it is accessed as a property of a Spatially Enabled DataFrame.
 
     from dm import Country
 
+    brand_name = 'ace hardware'
+
     # start by creating a country object instance
     usa = Country('USA')
 
@@ -19,6 +21,12 @@ it is accessed as a property of a Spatially Enabled DataFrame.
     # use the DemographicModeling accessor to get block groups in the AOI
     bg_df = aoi_df.block_groups.get()
 
+    # get the brand business locations
+    biz_df = aoi_df.mdl.business.get_by_name(brand_name)
+
+    # get the competition locations
+    comp_df = aoi_df.mdl.business.get_competition(biz_df, local_threshold=3)
+
     # get current year key variables for enrichment
     e_vars = cntry.enrich_variables
     key_vars = e_vars[
@@ -27,7 +35,18 @@ it is accessed as a property of a Spatially Enabled DataFrame.
     ]
 
     # use the DemographicModeling accessor to now enrich the block groups
-    enrich_df = ta_df.mdl.enrich(key_vars)
+    enrich_df = bg_df.mdl.enrich(key_vars)
+
+    # get the drive distance and drive time to nearest three brand store locations for each block group
+    bg_near_biz_df = enrich_df.mdl.proximity.get_nearest(biz_df, origin_id_column='ID', near_prefix='brand'))
+
+    # now, do the same for competitor locations
+    bg_near_biz_comp_df = bg_near_biz_df.mdl.proximity.get_nearest(
+        origin_id_column='ID',
+        near_prefix='comp',
+        destination_count=6
+        destination_columns_to_keep=['brand_name', 'brand_name_category']
+    )
 
 .. autoclass:: modeling.ModelingAccessor
    :members:
