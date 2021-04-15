@@ -842,6 +842,9 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(biz_df, id_column, name_column, local_threshold)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_by_code_gis(self, category_code: [str, list], code_type: str = 'NAICS', name_column: str = 'CONAME',
@@ -863,6 +866,9 @@ class Business:
         # tweak the schema for output
         biz_std_df = self._add_std_cols(biz_df, id_column, name_column, local_threshold)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_by_name_local(self, business_name: str, name_column: str = 'CONAME',
@@ -880,6 +886,9 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_by_name_gis(self, business_name: str, name_column: str = 'CONAME', id_col: str = 'LOCNUM') -> pd.DataFrame:
@@ -892,6 +901,9 @@ class Business:
 
         # standardize the output
         biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
+
+        # tack on the country for follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
 
         return biz_std_df
 
@@ -959,6 +971,9 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_competition_gis(self, brand_businesses: [str, pd.DataFrame], name_column: str = 'CONAME',
@@ -1009,6 +1024,9 @@ class Business:
 
         # ensure valid spatially enabled dataframe
         biz_std_df.spatial.set_geometry('SHAPE')
+
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
 
         return biz_std_df
 
@@ -1457,10 +1475,12 @@ class Proximity:
                     destination_count: Optional[int] = 4, near_prefix: Optional[str] = None,
                     destination_columns_to_keep: Union[str, list] = None) -> pd.DataFrame:
         """
-        Create a closest destination dataframe using origin and destination Spatially Enabled
-        Dataframes, but keep each origin and destination still in a discrete row instead
-        of collapsing to a single row per origin. The main reason to use this is if
-        needing the geometry for visualization.
+        Get nearest enables getting the nth (default is four) nearest locations
+        based on drive distance between two Spatially Enabled DataFrames. If the
+        origins are polygons, the centroids will be used as the start locations.
+        This is useful for getting the nearest store brand locations to every
+        origin block group in a metropolitan area along with the nearest
+        competition locations to every block group in the same metropolitan area.
 
         Args:
             destination_dataframe: Destination points in one of the supported input formats.
@@ -1481,6 +1501,42 @@ class Proximity:
         Returns:
             Spatially Enabled Dataframe with a row for each origin id, and metrics for
             each nth destinations.
+
+        .. code-block:: python
+
+            from modeling import Country
+
+            brand_name = 'ace hardware'
+
+            # create a country ojbect to work with
+            usa = Country('USA')
+
+            # get a metropolitan area, a CBSA, to use as the study area
+            aoi_df = usa.cbsas.get('seattle')
+
+            # get the current year key variables to use for enrichment
+            evars = usa.enrich_variables
+            key_vars = evars[
+                (evars.name.str.endswith('CY'))
+                & (evars.data_collection.str.lower().str.contains('key'))
+            ].reset_index(drop=True)
+
+            # get the block groups and enrich them with the ~20 key variables
+            bg_df = aoi_df.mdl.level(0).get().mdl.enrich(key_vars)
+
+            # get the store brand locations and competition locations
+            biz_df = aoi_df.mdl.business.get_by_name(brand_name)
+            comp_df = aoi_df.mdl.business.get_competition(biz_df)
+
+            # get the nearest three brand locations to every block group
+            bg_near_biz = bg_df.mdl.proximity.get_nearest(biz_df,
+                origin_id_column='ID', destination_count=3, near_prefix='brand')
+
+            # get the nearest six competition locations to every block group
+            bg_near_df = bg_near_biz.mdl.proximity.get_nearest(bg_near_biz,
+                origin_id_column='ID', near_prefix='comp', destination_count=6,
+                destination_columns_to_keep=['brand_name', 'brand_name_category'])
+
         """
         # Max GIS batch count
         batch_size = 99
@@ -1492,6 +1548,10 @@ class Proximity:
                                                          'df.spatial.validate().'
 
         if self.source is None:
+            if '_cntry' in self._data.attrs.keys():
+                self._cntry = self._data.attrs['_cntry']
+                self.source = self._cntry.source
+            source = self.source
             assert isinstance(source, (str, Path, Country, GIS)), 'source must be either a path to the network ' \
                                                                   'dataset, a modeling.Country object instance, or a ' \
                                                                   'reference to a GIS.'
@@ -1606,7 +1666,7 @@ class Proximity:
 
         # shuffle the columns so the geometry is at the end
         if out_df.spatial.name is not None:
-            out_df = out_df[[c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
+            out_df = out_df.loc[:, [c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
             
         # make sure there are not any duplicates lingering
         out_df.drop_duplicates(origin_id_column, inplace=True)

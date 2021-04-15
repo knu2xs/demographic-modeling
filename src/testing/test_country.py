@@ -241,6 +241,10 @@ def test_enrich_keycy_set_source_ent(ent_usa):
     enrich_keycy_set_source_test(ent_usa)
 
 
+def test_enrich_keycy_set_source_ent(agol_usa):
+    enrich_keycy_set_source_test(agol_usa)
+
+
 def test_enrich_keycy_ent_batch(ent_usa):
     kv = get_key_cy_vars(ent_usa)
     cnty_df = ent_usa.cbsas.get('seattle').mdl.level(0).get()
@@ -454,3 +458,25 @@ def test_tracts_routing_gis_ent(aoi_gis_ent):
 
 def test_tracts_routing_gis_agol(aoi_gis_agol):
     tracts_routing_test(aoi_gis_agol)
+
+
+def biz_to_comp_routing_test(aoi_df:pd.DataFrame):
+    biz_df = aoi_df.mdl.business.get_by_name('ace hardware')
+    comp_df = aoi_df.mdl.business.get_competition(biz_df)
+    biz_near_comp_df = biz_df.mdl.proximity.get_nearest(comp_df, origin_id_column='LOCNUM',
+                                                        destination_id_column='LOCNUM')
+    assert isinstance(biz_near_comp_df, pd.DataFrame)
+    assert biz_near_comp_df.spatial.validate()
+    assert len(biz_near_comp_df) == len(biz_df)
+
+
+def test_biz_to_comp_routing_local(aoi_local):
+    biz_to_comp_routing_test(aoi_local)
+
+
+def test_biz_to_comp_routing_ent(aoi_gis_ent):
+    biz_to_comp_routing_test(aoi_gis_ent)
+
+
+def test_biz_to_comp_routing_agol(aoi_gis_agol):
+    biz_to_comp_routing_test(aoi_gis_agol)
