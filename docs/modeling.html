@@ -167,6 +167,8 @@ ModelingAccessor object is rarely, if ever, created directly. Rather,
 it is accessed as a property of a Spatially Enabled DataFrame.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dm</span> <span class="kn">import</span> <span class="n">Country</span>
 
+<span class="n">brand_name</span> <span class="o">=</span> <span class="s1">&#39;ace hardware&#39;</span>
+
 <span class="c1"># start by creating a country object instance</span>
 <span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
 
@@ -176,6 +178,12 @@ it is accessed as a property of a Spatially Enabled DataFrame.</p>
 <span class="c1"># use the DemographicModeling accessor to get block groups in the AOI</span>
 <span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">block_groups</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
+<span class="c1"># get the brand business locations</span>
+<span class="n">biz_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_by_name</span><span class="p">(</span><span class="n">brand_name</span><span class="p">)</span>
+
+<span class="c1"># get the competition locations</span>
+<span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competition</span><span class="p">(</span><span class="n">biz_df</span><span class="p">,</span> <span class="n">local_threshold</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
 <span class="c1"># get current year key variables for enrichment</span>
 <span class="n">e_vars</span> <span class="o">=</span> <span class="n">cntry</span><span class="o">.</span><span class="n">enrich_variables</span>
 <span class="n">key_vars</span> <span class="o">=</span> <span class="n">e_vars</span><span class="p">[</span>
@@ -184,7 +192,18 @@ it is accessed as a property of a Spatially Enabled DataFrame.</p>
 <span class="p">]</span>
 
 <span class="c1"># use the DemographicModeling accessor to now enrich the block groups</span>
-<span class="n">enrich_df</span> <span class="o">=</span> <span class="n">ta_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+<span class="n">enrich_df</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+
+<span class="c1"># get the drive distance and drive time to nearest three brand store locations for each block group</span>
+<span class="n">bg_near_biz_df</span> <span class="o">=</span> <span class="n">enrich_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">proximity</span><span class="o">.</span><span class="n">get_nearest</span><span class="p">(</span><span class="n">biz_df</span><span class="p">,</span> <span class="n">origin_id_column</span><span class="o">=</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="n">near_prefix</span><span class="o">=</span><span class="s1">&#39;brand&#39;</span><span class="p">))</span>
+
+<span class="c1"># now, do the same for competitor locations</span>
+<span class="n">bg_near_biz_comp_df</span> <span class="o">=</span> <span class="n">bg_near_biz_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">proximity</span><span class="o">.</span><span class="n">get_nearest</span><span class="p">(</span>
+    <span class="n">origin_id_column</span><span class="o">=</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span>
+    <span class="n">near_prefix</span><span class="o">=</span><span class="s1">&#39;comp&#39;</span><span class="p">,</span>
+    <span class="n">destination_count</span><span class="o">=</span><span class="mi">6</span>
+    <span class="n">destination_columns_to_keep</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;brand_name&#39;</span><span class="p">,</span> <span class="s1">&#39;brand_name_category&#39;</span><span class="p">]</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 <dl class="py class">
@@ -815,10 +834,12 @@ be sampled to return the industry code values identifying the locations.</p></li
 <dl class="py method">
 <dt id="modeling.Proximity.get_nearest">
 <code class="sig-name descname"><span class="pre">get_nearest</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">destination_dataframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">single_row_per_origin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">origin_id_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'LOCNUM'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_id_column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'LOCNUM'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">near_prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_columns_to_keep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#modeling.Proximity.get_nearest" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a closest destination dataframe using origin and destination Spatially Enabled
-Dataframes, but keep each origin and destination still in a discrete row instead
-of collapsing to a single row per origin. The main reason to use this is if
-needing the geometry for visualization.</p>
+<dd><p>Get nearest enables getting the nth (default is four) nearest locations
+based on drive distance between two Spatially Enabled DataFrames. If the
+origins are polygons, the centroids will be used as the start locations.
+This is useful for getting the nearest store brand locations to every
+origin block group in a metropolitan area along with the nearest
+competition locations to every block group in the same metropolitan area.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -846,6 +867,40 @@ businesses, this includes the column with the business names.</p></li>
 each nth destinations.</p>
 </dd>
 </dl>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">modeling</span> <span class="kn">import</span> <span class="n">Country</span>
+
+<span class="n">brand_name</span> <span class="o">=</span> <span class="s1">&#39;ace hardware&#39;</span>
+
+<span class="c1"># create a country ojbect to work with</span>
+<span class="n">usa</span> <span class="o">=</span> <span class="n">Country</span><span class="p">(</span><span class="s1">&#39;USA&#39;</span><span class="p">)</span>
+
+<span class="c1"># get a metropolitan area, a CBSA, to use as the study area</span>
+<span class="n">aoi_df</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">cbsas</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;seattle&#39;</span><span class="p">)</span>
+
+<span class="c1"># get the current year key variables to use for enrichment</span>
+<span class="n">evars</span> <span class="o">=</span> <span class="n">usa</span><span class="o">.</span><span class="n">enrich_variables</span>
+<span class="n">key_vars</span> <span class="o">=</span> <span class="n">evars</span><span class="p">[</span>
+    <span class="p">(</span><span class="n">evars</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;CY&#39;</span><span class="p">))</span>
+    <span class="o">&amp;</span> <span class="p">(</span><span class="n">evars</span><span class="o">.</span><span class="n">data_collection</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="s1">&#39;key&#39;</span><span class="p">))</span>
+<span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># get the block groups and enrich them with the ~20 key variables</span>
+<span class="n">bg_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">level</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">enrich</span><span class="p">(</span><span class="n">key_vars</span><span class="p">)</span>
+
+<span class="c1"># get the store brand locations and competition locations</span>
+<span class="n">biz_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_by_name</span><span class="p">(</span><span class="n">brand_name</span><span class="p">)</span>
+<span class="n">comp_df</span> <span class="o">=</span> <span class="n">aoi_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">business</span><span class="o">.</span><span class="n">get_competition</span><span class="p">(</span><span class="n">biz_df</span><span class="p">)</span>
+
+<span class="c1"># get the nearest three brand locations to every block group</span>
+<span class="n">bg_near_biz</span> <span class="o">=</span> <span class="n">bg_df</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">proximity</span><span class="o">.</span><span class="n">get_nearest</span><span class="p">(</span><span class="n">biz_df</span><span class="p">,</span>
+    <span class="n">origin_id_column</span><span class="o">=</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="n">destination_count</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">near_prefix</span><span class="o">=</span><span class="s1">&#39;brand&#39;</span><span class="p">)</span>
+
+<span class="c1"># get the nearest six competition locations to every block group</span>
+<span class="n">bg_near_df</span> <span class="o">=</span> <span class="n">bg_near_biz</span><span class="o">.</span><span class="n">mdl</span><span class="o">.</span><span class="n">proximity</span><span class="o">.</span><span class="n">get_nearest</span><span class="p">(</span><span class="n">bg_near_biz</span><span class="p">,</span>
+    <span class="n">origin_id_column</span><span class="o">=</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="n">near_prefix</span><span class="o">=</span><span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="n">destination_count</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+    <span class="n">destination_columns_to_keep</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;brand_name&#39;</span><span class="p">,</span> <span class="s1">&#39;brand_name_category&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </dd></dl>
