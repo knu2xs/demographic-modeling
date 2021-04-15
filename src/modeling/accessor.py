@@ -1475,10 +1475,12 @@ class Proximity:
                     destination_count: Optional[int] = 4, near_prefix: Optional[str] = None,
                     destination_columns_to_keep: Union[str, list] = None) -> pd.DataFrame:
         """
-        Create a closest destination dataframe using origin and destination Spatially Enabled
-        Dataframes, but keep each origin and destination still in a discrete row instead
-        of collapsing to a single row per origin. The main reason to use this is if
-        needing the geometry for visualization.
+        Get nearest enables getting the nth (default is four) nearest locations
+        based on drive distance between two Spatially Enabled DataFrames. If the
+        origins are polygons, the centroids will be used as the start locations.
+        This is useful for getting the nearest store brand locations to every
+        origin block group in a metropolitan area along with the nearest
+        competition locations to every block group in the same metropolitan area.
 
         Args:
             destination_dataframe: Destination points in one of the supported input formats.
@@ -1499,6 +1501,42 @@ class Proximity:
         Returns:
             Spatially Enabled Dataframe with a row for each origin id, and metrics for
             each nth destinations.
+
+        .. code-block:: python
+
+            from modeling import Country
+
+            brand_name = 'ace hardware'
+
+            # create a country ojbect to work with
+            usa = Country('USA')
+
+            # get a metropolitan area, a CBSA, to use as the study area
+            aoi_df = usa.cbsas.get('seattle')
+
+            # get the current year key variables to use for enrichment
+            evars = usa.enrich_variables
+            key_vars = evars[
+                (evars.name.str.endswith('CY'))
+                & (evars.data_collection.str.lower().str.contains('key'))
+            ].reset_index(drop=True)
+
+            # get the block groups and enrich them with the ~20 key variables
+            bg_df = aoi_df.mdl.level(0).get().mdl.enrich(key_vars)
+
+            # get the store brand locations and competition locations
+            biz_df = aoi_df.mdl.business.get_by_name(brand_name)
+            comp_df = aoi_df.mdl.business.get_competition(biz_df)
+
+            # get the nearest three brand locations to every block group
+            bg_near_biz = bg_df.mdl.proximity.get_nearest(biz_df,
+                origin_id_column='ID', destination_count=3, near_prefix='brand')
+
+            # get the nearest six competition locations to every block group
+            bg_near_df = bg_near_biz.mdl.proximity.get_nearest(bg_near_biz,
+                origin_id_column='ID', near_prefix='comp', destination_count=6,
+                destination_columns_to_keep=['brand_name', 'brand_name_category'])
+
         """
         # Max GIS batch count
         batch_size = 99
