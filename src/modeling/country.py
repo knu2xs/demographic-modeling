@@ -934,6 +934,9 @@ class Country:
         # set the geometry so the GeoAccessor knows it is an SeDF
         out_df.spatial.set_geometry('SHAPE')
 
+        # tack on metadata for potential future processing
+        out_df.attrs = data.attrs
+
         return out_df
 
 

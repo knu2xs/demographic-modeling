@@ -842,6 +842,9 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(biz_df, id_column, name_column, local_threshold)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_by_code_gis(self, category_code: [str, list], code_type: str = 'NAICS', name_column: str = 'CONAME',
@@ -863,6 +866,9 @@ class Business:
         # tweak the schema for output
         biz_std_df = self._add_std_cols(biz_df, id_column, name_column, local_threshold)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_by_name_local(self, business_name: str, name_column: str = 'CONAME',
@@ -880,6 +886,9 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_by_name_gis(self, business_name: str, name_column: str = 'CONAME', id_col: str = 'LOCNUM') -> pd.DataFrame:
@@ -892,6 +901,9 @@ class Business:
 
         # standardize the output
         biz_std_df = self._add_std_cols(biz_df, id_col, name_column)
+
+        # tack on the country for follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
 
         return biz_std_df
 
@@ -959,6 +971,9 @@ class Business:
         # add standard schema columns onto output
         biz_std_df = self._add_std_cols(comp_df, id_column, name_column, local_threshold)
 
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
+
         return biz_std_df
 
     def _get_competition_gis(self, brand_businesses: [str, pd.DataFrame], name_column: str = 'CONAME',
@@ -1009,6 +1024,9 @@ class Business:
 
         # ensure valid spatially enabled dataframe
         biz_std_df.spatial.set_geometry('SHAPE')
+
+        # tack on the country for potential follow on analysis
+        biz_std_df.attrs['_cntry'] = aoi_df.attrs['_cntry']
 
         return biz_std_df
 
@@ -1492,6 +1510,10 @@ class Proximity:
                                                          'df.spatial.validate().'
 
         if self.source is None:
+            if '_cntry' in self._data.attrs.keys():
+                self._cntry = self._data.attrs['_cntry']
+                self.source = self._cntry.source
+            source = self.source
             assert isinstance(source, (str, Path, Country, GIS)), 'source must be either a path to the network ' \
                                                                   'dataset, a modeling.Country object instance, or a ' \
                                                                   'reference to a GIS.'
@@ -1606,7 +1628,7 @@ class Proximity:
 
         # shuffle the columns so the geometry is at the end
         if out_df.spatial.name is not None:
-            out_df = out_df[[c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
+            out_df = out_df.loc[:, [c for c in out_df.columns if c != out_df.spatial.name] + [out_df.spatial.name]]
             
         # make sure there are not any duplicates lingering
         out_df.drop_duplicates(origin_id_column, inplace=True)
