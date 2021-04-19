@@ -1,13 +1,31 @@
 # demographic-modeling-module
 
-Demographic Modeling is _opinionated_ tooling for performing demographic analysis using both geography and machine 
-learning.
+Demographic Modeling is _opinionated_ tooling for creating geographic factors for machine learning.
 
 ## Opinionated
 
 No, this set of tooling written in Python is not going to have a political debate with you. Rather, while flexible 
 enough to be used in a variety of ways, this tooling provides a clear way to perform analysis. This enables you to
 get started and be productive as quickly as possible.
+
+### A Few Opinions
+
+#### DataFrames
+
+There is a reason why DataFrames are so ubiqutous across all data science data tools. DataFrames, tabular data with
+built in functionality, they make working with data. In this project, almost everything takes input data as a Pandas
+DataFrame, and if the data is geographic, spatial, it is an Esri Spatially Enabled DataFrame.
+
+#### Spatial Reference - WGS 84
+
+Frequently one of the most difficult things about working with spatial data is knowing where it is. Spatial reference,
+many times referred to as the the *projection*, is how we know where things are located on the face of the planet.
+The most commonly used spatial reference is WGS84, the longitude and latitude used by GPS systems, including those in
+smart phones. However, for those of us who spend our lives working with geographic data, how we know where something
+is, or is *not*, is not as simple as it seems. Data can come in a variety of *spatial references*, and to make working
+with data coming together potentially in differing spatial references easier, this package converts (*projects*) data
+into WGS84 by default so the data is easier to deal with and the coordinates are easily recognized by most people,
+geographers and data scientists alike.
 
 ## Getting Started
 
@@ -17,62 +35,21 @@ From the project directory, create an environment with all dependencies installe
 > make env
 ```
 
-This creates a conda environment cloned from the ArcGIS Pro default environment `arcgispro-py3`, and names this new
-environment `demographic-modeling`, and also activates this environment for ArcGIS Pro at the same time. If opening
-a new command prompt, you can easily activate this environment using the command.. 
+If you want to manually activate the environment, this can be accomplished with the commmand.
 
 ```
-> make env_activate
-``` 
+> conda activate demographic-modeling
+```
 
-...which simply calls `> activate demographic-modeling` for you.
-
-From there, the example workflow can be found in the notebooks in the `./notebooks` directory of the project, and
-explored by simply calling.
+An example workflow can be found in the Jupyter notebooks in the `./notebooks` directory of the project. If you want 
+to get started quickly, you can use the following command. It activates the environment and starts Jupyter Lab in
+one consolidated step for you.
 
 ```
 > make jupyter
 ```
 
-This command takes care of activating the environment, and also starting jupyter lab, so you can get started quickly.
-
-## Project Organization
-------------
-```
-    ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data`
-    ├── make.bat           <- Windows batch file with commands like `make data`
-    ├── setup.py           <- Setup script for the library (dm)
-    ├── .env               <- Any environment variables here - created as part of project creation, 
-    │                         but NOT syncronized with git repo for project.                
-    ├── README.md          <- The top-level README for developers using this project.
-    ├── arcgis             <- Root location for ArcGIS Pro project created as part of
-    │   │                     data science project creation.
-    │   ├── demographic-modeling-module.aprx <- ArcGIS Pro project.    
-    │   └── demographic-modeling-module.tbx  <- ArcGIS Pro toolbox associated with the project.
-    ├── scripts            <- Put scripts to run things here.
-    ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   │   └── interim.gdb
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   │   └── processed.gdb
-    │   └── raw            <- The original, immutable data dump.
-    │       └── raw.gdb
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    ├── models             <- Trained and serialized models, model predictions, or model summaries
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a 2 digits (for ordering),
-    │   │                     descriptive name. e.g.: 01_exploratory_analysis.ipynb
-    │   └── notebook_template.ipynb
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    ├── environment.yml    <- The requirements file for reproducing the analysis environment. This 
-    │                         is generated by running `conda env export > environment.yml` or
-    │                         `make env_export`.                         
-    └── src                <- Source code for use in this project.
-        └── dm <- Library containing the bulk of code used in this 
-                                                  project. 
-```
-
-<p><small>Project based on the <a target="_blank" href="https://github.com/knu2xs/cookiecutter-geoai">cookiecutter GeoAI project template</a>. This template, in turn, is simply an extension and light modification of the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+<p><small>Project based on the <a target="_blank" href="https://github.com/knu2xs/cookiecutter-geoai">cookiecutter 
+GeoAI project template</a>. This template, in turn, is simply an extension and light modification of the 
+<a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science 
+project template</a>. #cookiecutterdatascience</small></p>
