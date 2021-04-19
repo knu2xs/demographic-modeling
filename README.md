@@ -13,8 +13,8 @@ get started and be productive as quickly as possible.
 #### DataFrames
 
 There is a reason why DataFrames are so ubiqutous across all data science data tools. DataFrames, tabular data with
-built in functionality, they make working with data. In this project, almost everything takes input data as a Pandas
-DataFrame, and if the data is geographic, spatial, it is an Esri Spatially Enabled DataFrame.
+built in functionality, they make working with data expendetially easier. In this project, almost everything takes 
+input data as a Pandas DataFrame, and if the data is geographic, spatial, it is an Esri Spatially Enabled DataFrame.
 
 #### Spatial Reference - WGS 84
 
