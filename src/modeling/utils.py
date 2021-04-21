@@ -94,7 +94,7 @@ def set_source(in_source: Union[str, GIS] = None) -> Union[str, GIS]:
             source = 'local'
 
     # if nothing provided, default to local if arcpy is available, and remote if arcpy not available
-    if in_source is None and local_business_analyst_avail():
+    elif in_source is None and local_business_analyst_avail():
         source = 'local'
 
     # TODO: add check if web gis routing and enrich active - error if not available
@@ -388,6 +388,7 @@ def get_top_codes(codes: Union[pd.Series, list, tuple], threshold=0.5) -> list:
     cd_vals = list(cnt_df[(cnt_df['pct_cumsum'] < threshold) | (cnt_df['pct'] > threshold)].index)
 
     return cd_vals
+
 
 class LocalNetworkEnvironment:
 
