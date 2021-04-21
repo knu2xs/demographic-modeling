@@ -609,7 +609,8 @@ class Country:
 
     @local_vs_gis
     def enrich(self, data: pd.DataFrame,
-               enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame]) -> pd.DataFrame:
+               enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame],
+               enrich_geography_level: str = None, enrich_id_column: str = None) -> pd.DataFrame:
         """
         Enrich a spatially enabled dataframe using either a enrichment
         variables defined using a Python List, NumPy Array or Pandas
@@ -624,6 +625,19 @@ class Country:
                 Optional iterable of enrich variables to use for
                 enriching data. Filtered output from
                 Country.enrich_variables can also be used.
+            enrich_geography_level: If using a standard level of geography,
+                the geography level to use. This is necessary only when
+                specifying an ``enrich_id_column`` as well. This is not
+                necessary if the standard geographies were created as
+                part of a data preperation workflow using the
+                ModelingAccesor.
+            enrich_id_column: If specifying to use a standard level of
+                geography, the column in the source data containing the
+                identifying values correlated to the geographic areas.
+                This is not necessary if the standard geographies were
+                created as part of a data preperation workflow using the
+                ModelingAccesor.
+
 
         Returns:
             Spatially Enabled DataFrame with enriched data added.
@@ -778,8 +792,13 @@ class Country:
         return enrich_variables
 
     def _enrich_local(self, data: pd.DataFrame,
-                      enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
+                      enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None,
+                      enrich_geography_level: str = None, enrich_id_column: str = None) -> pd.DataFrame:
         """Implementation of enrich for local analysis."""
+        # TODO: Implement - likely will require using a SQL query against the local layer
+        if enrich_geography_level or enrich_id_column:
+            raise NotImplemented('using enrich_geography_level and enrich_id_column is not yet implemented with local '
+                                 'data.')
 
         # preprocess and combine all the enrichment variables into a single string for input into the enrich tool
         evars = self._enrich_variable_preprocessing(enrich_variables)
@@ -829,8 +848,47 @@ class Country:
         return out_data
 
     def _enrich_gis(self, data: pd.DataFrame,
-                    enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None) -> pd.DataFrame:
+                    enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None,
+                    enrich_geography_level: str = None, enrich_id_column: str = None) -> pd.DataFrame:
         """Implementation of enrich for analysis using Web GIS."""
+        if enrich_geography_level or enrich_id_column:
+            assert enrich_geography_level and enrich_id_column, 'Both enrich_geography_level and enrich_id_column ' \
+                                                                'must be specified to use standard ids.'
+
+        assert enrich_id_column in data.columns, f'The enrich_id_column provided, "{enrich_id_column}," does not ' \
+                                                 f'appear to be an available column.'
+
+        # get the geography level and id's are explicitly provided
+        if enrich_geography_level and enrich_id_column:
+
+            # get the geography level row from the geography levels dataframe by the geo_name
+            geo_lvl_df = self.geography_levels[self.geography_levels.geo_name == enrich_geography_level]
+
+            # if, for some reason, the acutal geography level id was passed in, check for this as well
+            if len(geo_lvl_df.index) == 0:
+                geo_lvl_df = self.geography_levels[self.geography_levels.id == enrich_geography_level]
+
+            # pitch a fit if no geography level was found, but try to offer helpful suggestions
+            assert len(geo_lvl_df.index) > 0, f'The specified geography level, {enrich_geography_level} does not ' \
+                                              f'appear to be one of the available geography levels. This must be a ' \
+                                              f'value from the "geo_name" column in teh dataframe available from the ' \
+                                              f'"geography_levels" property of the Country object.'
+
+            # get the actual geography level id
+            geo_lvl = geo_lvl_df.iloc[0].id
+
+            # create the list of ids to be used for enrichment
+            id_lst = list(data[enrich_id_column])
+
+        # check if they are in the attrs from a previous ModelingAccessor function output
+        elif 'parent_geo' in data.attrs.keys():
+            geo_lvl = data.attrs['parent_geo']['resource']
+            id_lst = data.attrs['parent_geo']['id']
+
+        # otherwise, set to null - makes it easier to check later
+        else:
+            geo_lvl, id_lst = None, None
+
         evars = self._enrich_variable_preprocessing(enrich_variables)
 
         # get the maximum batch size less one just for good measure
@@ -854,18 +912,18 @@ class Country:
         in_req_list, out_df_lst = [], []
 
         # if working with data derived from standard geographies
-        if 'parent_geo' in data.attrs:
+        if geo_lvl and id_lst:
 
             # use the count of features and the max batch size to iteratively enrich the input data
             for x in range(0, len(data.index), std_batch_size):
 
                 # peel off just the id's for this batch
-                id_lst = data.attrs['parent_geo']['id'][x: x + std_batch_size]
+                batch_id_lst = id_lst[x: x + std_batch_size]
 
                 params['studyAreas'] = [{
-                    "sourceCountry": data.attrs['parent_geo']['resource'].split('.')[0],
-                    "layer": data.attrs['parent_geo']['resource'],
-                    "ids": id_lst
+                    "sourceCountry": geo_lvl.split('.')[0],
+                    "layer": geo_lvl,
+                    "ids": batch_id_lst
                 }]
 
                 # add the payload onto the list
@@ -928,11 +986,14 @@ class Country:
         enrich_df = pd.concat(out_df_lst).reset_index(drop=True)
         out_df = pd.concat([data, enrich_df], axis=1, sort=False)
 
-        # shuffle columns so geometry is at the end
-        out_df = out_df[[c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']]
+        # if there is geometry, which there may not be since can enrich using just ids
+        if 'SHAPE' in out_df.columns:
 
-        # set the geometry so the GeoAccessor knows it is an SeDF
-        out_df.spatial.set_geometry('SHAPE')
+            # shuffle columns so geometry is at the end
+            out_df = out_df[[c for c in out_df.columns if c != 'SHAPE'] + ['SHAPE']]
+
+            # set the geometry so the GeoAccessor knows it is an SeDF
+            out_df.spatial.set_geometry('SHAPE')
 
         # tack on metadata for potential future processing
         out_df.attrs = data.attrs
