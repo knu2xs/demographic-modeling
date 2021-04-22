@@ -19,6 +19,11 @@ def test_can_enrich_true(agol_gis):
     assert can_enrich is True
 
 
+def test_set_source_local_explicit():
+    src = modeling.utils.set_source('local')
+    assert src == 'local'
+
+
 def test_module_avail_false():
     avail = modeling.utils.module_avail('scrapy')
     assert avail is False
