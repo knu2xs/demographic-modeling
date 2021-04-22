@@ -899,7 +899,7 @@ class Country:
                            if v['paramName'] == 'optimalBatchStudyAreasNumber'][0]
 
         # not sure why, but it struggles with larger datasets
-        geom_batch_size = math.ceil(geom_batch_size * 0.5)
+        geom_batch_size = math.floor(geom_batch_size * 0.5)
 
         # initialize the params for the REST call
         params = {
@@ -953,21 +953,46 @@ class Country:
                 in_req_list.append(params)
 
         # iterate the packaged request payloads
-        for req_params in in_req_list:
+        for idx, req_params in enumerate(in_req_list):
 
-            # send the request to the server using post because if sending geometry, the message can be big
-            r_json = self.source._con.post(
-                f'{self.source.properties.helperServices("geoenrichment").url}/Geoenrichment/Enrich',
-                params=req_params)
+            # track failed request attempts, and put attempt count in a variable
+            fail_cnt = 0
+            attempt_cnt = 5
 
-            # ensure a valid result is received
-            if 'error' in r_json:
-                err = r_json['error']
-                raise Exception(f'Error in enriching data using Business Analyst Enrich REST endpoint. Error Code '
-                                f'{err["code"]}: {err["message"]}')
+            # account for it sometimes just not working
+            while fail_cnt <= attempt_cnt:
 
-            # unpack the enriched results - reaching into the FeatureSet for just the attributes
-            r_df = pd.DataFrame([f['attributes'] for f in r_json['results'][0]['value']['FeatureSet'][0]['features']])
+                # enable a little resiliency if encountering issues
+                try:
+
+                    # send the request to the server using post because if sending geometry, the message can be big
+                    enrich_url = self.source.properties.helperServices("geoenrichment").url
+                    r_json = self.source._con.post(f'{enrich_url}/Geoenrichment/Enrich', params=req_params)
+
+                    # ensure a valid result is received
+                    if 'error' in r_json:
+                        err = r_json['error']
+                        raise Exception(f'Error in enriching data using Business Analyst Enrich REST endpoint. Error '
+                                        f'Code {err["code"]}: {err["message"]}')
+
+                    # unpack the enriched results - reaching into the FeatureSet for just the attributes
+                    r_df = pd.DataFrame([f['attributes'] for f in
+                                         r_json['results'][0]['value']['FeatureSet'][0]['features']])
+
+                    # if earlier errors were encountered, reset the counter
+                    fail_cnt = 0
+
+                # if something goes wrong
+                except Exception as e:
+
+                    # increment the fail count
+                    fail_cnt += 1
+
+                    # bomb out if reached max attempts, and if not, still report results with warning
+                    if fail_cnt == attempt_cnt:
+                        raise Exception(e)
+                    else:
+                        warn(f'Batch: ({idx/len(in_req_list)}) - Failed attempt: ({fail_cnt}/{attempt_cnt}) - Error: {e}')
 
             # get just the columns with the enrich data requested
             evar_mstr = self.enrich_variables
@@ -976,8 +1001,6 @@ class Country:
 
             # filter the response dataframe to just enrich columns
             e_df = r_df[e_col_lst]
-
-            assert e_df.notna().all(axis=1).all()
 
             # add the dataframe to the list
             out_df_lst.append(e_df)
