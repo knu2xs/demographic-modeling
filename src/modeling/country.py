@@ -992,7 +992,9 @@ class Country:
                     if fail_cnt == attempt_cnt:
                         raise Exception(e)
                     else:
-                        warn(f'Batch: ({idx/len(in_req_list)}) - Failed attempt: ({fail_cnt}/{attempt_cnt}) - Error: {e}')
+                        warn(f'Batch: ({idx/len(in_req_list)})'
+                             f' - Failed attempt: ({fail_cnt}/{attempt_cnt})'
+                             f' - Error: {e}')
 
             # get just the columns with the enrich data requested
             evar_mstr = self.enrich_variables
