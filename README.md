@@ -1,4 +1,4 @@
-# demographic-modeling-module
+# Demographic Modeling
 
 Demographic Modeling is _opinionated_ tooling for creating geographic factors for machine learning.
 
