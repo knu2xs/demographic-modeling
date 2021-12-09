@@ -228,7 +228,7 @@ def enrich_keycy_set_source_test(ba_src: Country):
     kv = get_key_cy_vars(ba_src)
     cnty_df = ba_src.cbsas.get('seattle').mdl.counties.get()
     cnty_df.attrs = {}  # flush the attrs so the ModelingAccessor has no clue
-    enrch_df = cnty_df.mdl.enrich(kv, country=ba_src)
+    enrch_df = cnty_df.mdl.enrich(kv, source=ba_src)
     assert isinstance(enrch_df, pd.DataFrame)
     assert enrch_df.notna().all(axis=1).all()
 
@@ -260,6 +260,27 @@ def test_enrich_keycy_ent_set_source_batch(ent_usa):
     enrch_df = geo_df.mdl.enrich(kv)
     assert isinstance(enrch_df, pd.DataFrame)
     assert enrch_df.notna().all(axis=1).all()
+
+
+def enrich_keycy_by_ids_test(cntry: Country):
+    bg_df = cntry.cities_and_towns_places.get('seattle').mdl.level(0).get().drop(columns=['SHAPE'])
+    bg_df.attrs = {}  # flush the attrs to make sure we are not inadvertently cheating
+    kv = get_key_cy_vars(cntry)
+    enrch_df = bg_df.mdl.enrich(kv, enrich_geography_level='block_groups', enrich_id_column='ID', source=cntry)
+    assert isinstance(enrch_df, pd.DataFrame)
+    assert enrch_df.notna().all(axis=1).all()
+
+
+def test_enrich_keycy_by_ids_local(local_usa):
+    enrich_keycy_by_ids_test(local_usa)
+
+
+def test_enrich_keycy_by_ids_ent(ent_usa):
+    enrich_keycy_by_ids_test(ent_usa)
+
+
+def test_enrich_keycy_by_ids_agol(agol_usa):
+    enrich_keycy_by_ids_test(agol_usa)
 
 
 # businesses functionality testing

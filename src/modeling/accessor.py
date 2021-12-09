@@ -104,16 +104,28 @@ class ModelingAccessor:
         return geo_lvl
 
     def enrich(self, enrich_variables: Union[list, np.array, pd.Series, pd.DataFrame] = None,
-               country: Country = None) -> pd.DataFrame:
+               enrich_geography_level: str = None, enrich_id_column: str = None,
+               source: Country = None) -> pd.DataFrame:
         """
         Enrich the DataFrame using the provided enrich variable list.
 
         Args:
-            enrich_variables:
-                List of data variables for enrichment. This can optionally
-                be a filtered subset of the dataframe property of an instance
-                of the Country object.
-            country: Optional
+            enrich_variables: List of data variables for enrichment. This
+                can optionally be a filtered subset of the dataframe
+                property of an instance of the Country object.
+            enrich_geography_level: If using a standard level of geography,
+                the geography level to use. This is necessary only when
+                specifying an ``enrich_id_column`` as well. This is not
+                necessary if the standard geographies were created as
+                part of a data preparation workflow using the
+                ModelingAccessor.
+            enrich_id_column: If specifying to use a standard level of
+                geography, the column in the source data containing the
+                identifying values correlated to the geographic areas.
+                This is not necessary if the standard geographies were
+                created as part of a data preparation workflow using the
+                ModelingAccessor.
+            source: Optional
                 Country object instance. This must be included if the parent
                 dataframe was not created using this package's standard
                 geography methods, or if the enrichment variables are not
@@ -153,9 +165,9 @@ class ModelingAccessor:
             ta_df = ta_df.dm.enrich(key_vars)
 
         """
-        # prioritize the country parameter
-        if country is not None:
-            cntry = country
+        # prioritize the source country parameter
+        if source is not None:
+            cntry = source
 
         # next, if the enrich variables has the country defined
         elif '_cntry' in enrich_variables.attrs.keys():
@@ -178,7 +190,7 @@ class ModelingAccessor:
         data = self._data
 
         # invoke the enrich method from the country
-        out_df = cntry.enrich(data, enrich_variables)
+        out_df = cntry.enrich(data, enrich_variables, enrich_geography_level, enrich_id_column)
 
         return out_df
 
