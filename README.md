@@ -1,4 +1,4 @@
-# demographic-modeling-module
+# Demographic Modeling
 
 Demographic Modeling is _opinionated_ tooling for creating geographic factors for machine learning.
 
@@ -21,7 +21,9 @@ input data as a Pandas DataFrame, and if the data is geographic, spatial, it is 
 Frequently one of the most difficult things about working with spatial data is knowing where it is. Spatial reference,
 many times referred to as the the *projection*, is how we know where things are located on the face of the planet.
 The most commonly used spatial reference is WGS84, the longitude and latitude used by GPS systems, including those in
-smart phones. However, for those of us who spend our lives working with geographic data, how we know where something
+smart phones. 
+
+However, for those of us who spend our lives working with geographic data, how we know where something
 is, or is *not*, is not as simple as it seems. Data can come in a variety of *spatial references*, and to make working
 with data coming together potentially in differing spatial references easier, this package converts (*projects*) data
 into WGS84 by default so the data is easier to deal with and the coordinates are easily recognized by most people,
